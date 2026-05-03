@@ -11,8 +11,13 @@ export default function Upload({ onData }) {
 
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet);
+      const normalized = json.map(row => {
+        const entry = {};
+        Object.keys(row).forEach(k => { entry[k.trim().toLowerCase()] = row[k]; });
+        return entry;
+      });
 
-      onData(json);
+      onData(normalized);
     };
 
     reader.readAsArrayBuffer(file);
