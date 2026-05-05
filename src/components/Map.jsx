@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import turkey from "../data/turkey.json";
 
-export default function Map({ data = [] }) {
+export default function Map({ data = [], theme }) {
   const ref = useRef();
   const tooltipRef = useRef();
 
@@ -48,12 +48,19 @@ export default function Map({ data = [] }) {
       valueByCity[normalize(d.city)] = +d.value;
     });
 
-    const colorScale = d3.scaleSequential()
-      .domain([0, d3.max(data, d => +d.value) || 0])
-      .interpolator(d3.interpolateBlues);
-
     // Clear before rebuilding
     svg.selectAll("*").remove();
+
+    const interpolators = {
+      Blues: d3.interpolateBlues,
+      Reds: d3.interpolateReds,
+      Greens: d3.interpolateGreens,
+      Viridis: d3.interpolateViridis
+    };
+
+    const colorScale = d3.scaleSequential()
+      .domain([0, d3.max(data, d => +d.value) || 0])
+      .interpolator(interpolators[theme] || d3.interpolateBlues);
 
     // Gradient definition
     const legendWidth = 150;
@@ -122,7 +129,7 @@ export default function Map({ data = [] }) {
       .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
       .call(d3.axisBottom(legendScale).ticks(5));
 
-  }, [data]);
+  }, [data, theme]);
 
   return <svg ref={ref}></svg>;
 }
