@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
-import turkey from "../data/turkey.json";
 
-export default function Map({ data = [], theme }) {
+export default function Map({ data = [], theme, geoData, mapName }) {
   const ref = useRef();
   const tooltipRef = useRef();
 
@@ -33,13 +32,76 @@ export default function Map({ data = [], theme }) {
 
     const width = 800;
     const height = 600;
+    const LIMIT_LAT = 71;
+    const LIMIT_LON_EAST = 45;
+    const LIMIT_LON_WEST = -25;
+    const processedFeatures = mapName === "europe"
+  ? geoData.features.map(f => {
+      const countryName = f.properties?.name || f.id || "";
+      
+      // Sadece bu ülkelerin içindeki "parçaları" (adaları) kontrol et
+      const countriesWithIslands = ["Russia", "Norway", "France"];
+
+      if (countriesWithIslands.some(c => countryName.includes(c))) {
+        const isMulti = f.geometry.type === "MultiPolygon";
+        const coords = isMulti ? f.geometry.coordinates : [f.geometry.coordinates];
+
+        // Ülkenin her bir parçasını (adasını) tek tek kontrol et
+        const filteredCoords = coords.filter(polygon => {
+          try {
+            const pt = isMulti ? polygon[0][0] : polygon[0];
+            const lat = pt[1];
+            const lon = pt[0];
+
+            // 1. Çok kuzeydeki adaları at (Svalbard vb.)
+            if (lat > LIMIT_LAT) return false;
+            
+            // 2. Çok batıdaki (denizaşırı) parçaları at
+            if (lon < LIMIT_LON_WEST) return false;
+
+            // 3. RUSYA ANAKARASI İÇİN ÖZEL DURUM: 
+            // Eğer parça çok büyükse (anakara ise) boylam sınırına bakma, kalsın.
+            // Küçük bir ada ise ve çok doğudaysa onu at.
+            if (countryName.includes("Russia") && lon > LIMIT_LON_EAST) {
+              // Eğer bu parça Rusya'nın anakarasıysa (nokta sayısı çoksa) tut
+              return polygon[0].length > 100; 
+            }
+
+            return true;
+          } catch (e) { return true; }
+        });
+
+        return {
+          ...f,
+          geometry: {
+            ...f.geometry,
+            coordinates: isMulti ? filteredCoords : (filteredCoords[0] || coords[0])
+          }
+        };
+      }
+      return f; // Diğer ülkeler (Polonya vb.) dokunulmadan kalır
+    })
+  : geoData.features;
+
+    const finalGeoData = { ...geoData, features: processedFeatures };
 
     const svg = d3.select(ref.current)
       .attr("width", width)
       .attr("height", height);
+  svg.selectAll("*").remove();
 
-    const projection = d3.geoMercator()
-      .fitSize([width, height], turkey);
+    if (!finalGeoData || !finalGeoData.features) return;
+    
+    // --- YENİ MANTIK ---
+    let projection;
+
+    if (mapName === "usa") {
+      // D3'ün sihirli USA projeksiyonu (Alaska'yı taşıyan)
+      projection = d3.geoAlbersUsa().fitSize([width, height], geoData);
+    } else {
+      // Türkiye ve Avrupa için standart Mercator
+      projection = d3.geoMercator().fitSize([width, height], finalGeoData);
+    }
 
     const path = d3.geoPath().projection(projection);
 
@@ -48,8 +110,6 @@ export default function Map({ data = [], theme }) {
       valueByCity[normalize(d.city)] = +d.value;
     });
 
-    // Clear before rebuilding
-    svg.selectAll("*").remove();
 
     const interpolators = {
       Blues: d3.interpolateBlues,
@@ -84,7 +144,7 @@ export default function Map({ data = [], theme }) {
 
     // Map paths
     svg.selectAll("path")
-      .data(turkey.features)
+      .data(finalGeoData.features)
       .enter()
       .append("path")
       .attr("d", path)
@@ -129,7 +189,7 @@ export default function Map({ data = [], theme }) {
       .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
       .call(d3.axisBottom(legendScale).ticks(5));
 
-  }, [data, theme]);
+  }, [data, theme, geoData, mapName]);
 
   return <svg ref={ref}></svg>;
 }

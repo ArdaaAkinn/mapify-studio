@@ -1,9 +1,14 @@
 import { useState } from "react";
 import Map from "./components/Map";
 import Upload from "./components/Upload";
+import "./App.css";
+import turkey from "./data/turkey.json";
+import europe from "./data/europe.json";
+import usa from "./data/usa.json";
 
 function App() {
   const [data, setData] = useState([]);
+  const [selectedMap, setSelectedMap] = useState(turkey);
   const downloadImage = () => {
     const svg = document.querySelector("svg");
     const serializer = new XMLSerializer();
@@ -29,22 +34,63 @@ function App() {
   const [theme, setTheme] = useState("Blues");
 
   return (
-    <div>
-      <h1>Mapify Studio</h1>
+    <div className="app">
 
-      <Upload onData={setData} />
-      <button onClick={downloadImage}>
-        Download Map
-      </button>
-      <label>Color Theme: </label>
-      <select onChange={(e) => setTheme(e.target.value)} value={theme}>
-        <option value="Blues">Blues</option>
-        <option value="Reds">Reds</option>
-        <option value="Greens">Greens</option>
-        <option value="Viridis">Viridis</option>
-      </select>
+      {/* Sidebar */}
+      <div className="sidebar">
+        <h2>🗺️ Maps</h2>
 
-      <Map data={data} theme={theme} />
+  <button onClick={() => setSelectedMap(turkey)}>
+    Turkey
+  </button>
+
+        <button onClick={() => setSelectedMap(europe)}>
+          Europe
+        </button>
+
+        <button onClick={() => setSelectedMap(usa)}>
+          USA
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="main">
+
+        {/* Map Card */}
+        <div className="map-card">
+          <h1>Mapify Studio</h1>
+
+          <div className="map-container">
+            <Map 
+            data={data} 
+            theme={theme} 
+            geoData={selectedMap} 
+            mapName={selectedMap === turkey ? "turkey" : selectedMap === usa ? "usa" : "europe"}
+            />
+          </div>
+        </div>
+
+        {/* Controls Card */}
+        <div className="controls-card">
+
+          <Upload onData={setData} />
+
+          <select
+            onChange={(e) => setTheme(e.target.value)}
+            value={theme}
+          >
+            <option value="Blues">Blues</option>
+            <option value="Reds">Reds</option>
+            <option value="Greens">Greens</option>
+            <option value="Viridis">Viridis</option>
+          </select>
+
+          <button onClick={downloadImage}>
+            Download Map
+          </button>
+
+        </div>
+      </div>
     </div>
   );
 }
