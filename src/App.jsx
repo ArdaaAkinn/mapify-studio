@@ -2,13 +2,36 @@ import { useState } from "react";
 import Map from "./components/Map";
 import Upload from "./components/Upload";
 import "./App.css";
+import DataTable from "./components/DataTable";
 import turkey from "./data/turkey.json";
 import europe from "./data/europe.json";
 import usa from "./data/usa.json";
+import { useEffect } from "react";
 
 function App() {
   const [data, setData] = useState([]);
   const [selectedMap, setSelectedMap] = useState(turkey);
+  useEffect(() => {
+
+  if (!selectedMap?.features) return;
+
+  const generatedData = selectedMap.features.map(feature => {
+
+    const name =
+      feature.properties.name ||
+      feature.properties.NAME ||
+      feature.properties.admin ||
+      feature.properties.STATE_NAME;
+
+    return {
+      city: name,
+      value: ""
+    };
+  });
+
+  setData(generatedData);
+
+}, [selectedMap]);
   const downloadImage = () => {
     const svg = document.querySelector("svg");
     const serializer = new XMLSerializer();
@@ -51,6 +74,15 @@ function App() {
         <button onClick={() => setSelectedMap(usa)}>
           USA
         </button>
+
+        <div className="upload-section">
+    <Upload onData={setData} />
+  </div>
+  
+        <DataTable
+  data={data}
+  setData={setData}
+/>
       </div>
 
       {/* Main Content */}

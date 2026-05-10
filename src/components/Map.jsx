@@ -36,69 +36,78 @@ export default function Map({ data = [], theme, geoData, mapName }) {
     const LIMIT_LON_EAST = 45;
     const LIMIT_LON_WEST = -25;
     const processedFeatures = mapName === "europe"
-  ? geoData.features.map(f => {
-      const countryName = f.properties?.name || f.id || "";
-      
-      // Sadece bu ülkelerin içindeki "parçaları" (adaları) kontrol et
-      const countriesWithIslands = ["Russia", "Norway", "France"];
+      ? geoData.features.map(f => {
+        const countryName = f.properties?.name || f.id || "";
 
-      if (countriesWithIslands.some(c => countryName.includes(c))) {
-        const isMulti = f.geometry.type === "MultiPolygon";
-        const coords = isMulti ? f.geometry.coordinates : [f.geometry.coordinates];
+        // Sadece bu ülkelerin içindeki "parçaları" (adaları) kontrol et
+        const countriesWithIslands = ["Russia", "Norway", "France"];
 
-        // Ülkenin her bir parçasını (adasını) tek tek kontrol et
-        const filteredCoords = coords.filter(polygon => {
-          try {
-            const pt = isMulti ? polygon[0][0] : polygon[0];
-            const lat = pt[1];
-            const lon = pt[0];
+        if (countriesWithIslands.some(c => countryName.includes(c))) {
+          const isMulti = f.geometry.type === "MultiPolygon";
+          const coords = isMulti ? f.geometry.coordinates : [f.geometry.coordinates];
 
-            // 1. Çok kuzeydeki adaları at (Svalbard vb.)
-            if (lat > LIMIT_LAT) return false;
-            
-            // 2. Çok batıdaki (denizaşırı) parçaları at
-            if (lon < LIMIT_LON_WEST) return false;
+          // Ülkenin her bir parçasını (adasını) tek tek kontrol et
+          const filteredCoords = coords.filter(polygon => {
+            try {
+              const pt = isMulti ? polygon[0][0] : polygon[0];
+              const lat = pt[1];
+              const lon = pt[0];
 
-            // 3. RUSYA ANAKARASI İÇİN ÖZEL DURUM: 
-            // Eğer parça çok büyükse (anakara ise) boylam sınırına bakma, kalsın.
-            // Küçük bir ada ise ve çok doğudaysa onu at.
-            if (countryName.includes("Russia") && lon > LIMIT_LON_EAST) {
-              // Eğer bu parça Rusya'nın anakarasıysa (nokta sayısı çoksa) tut
-              return polygon[0].length > 100; 
+              // 1. Çok kuzeydeki adaları at (Svalbard vb.)
+              if (lat > LIMIT_LAT) return false;
+
+              // 2. Çok batıdaki (denizaşırı) parçaları at
+              if (lon < LIMIT_LON_WEST) return false;
+
+              // 3. RUSYA ANAKARASI İÇİN ÖZEL DURUM: 
+              // Eğer parça çok büyükse (anakara ise) boylam sınırına bakma, kalsın.
+              // Küçük bir ada ise ve çok doğudaysa onu at.
+              if (countryName.includes("Russia") && lon > LIMIT_LON_EAST) {
+                // Eğer bu parça Rusya'nın anakarasıysa (nokta sayısı çoksa) tut
+                return polygon[0].length > 100;
+              }
+
+              return true;
+            } catch (e) { return true; }
+          });
+
+          return {
+            ...f,
+            geometry: {
+              ...f.geometry,
+              coordinates: isMulti ? filteredCoords : (filteredCoords[0] || coords[0])
             }
-
-            return true;
-          } catch (e) { return true; }
-        });
-
-        return {
-          ...f,
-          geometry: {
-            ...f.geometry,
-            coordinates: isMulti ? filteredCoords : (filteredCoords[0] || coords[0])
-          }
-        };
-      }
-      return f; // Diğer ülkeler (Polonya vb.) dokunulmadan kalır
-    })
-  : geoData.features;
+          };
+        }
+        return f; // Diğer ülkeler (Polonya vb.) dokunulmadan kalır
+      })
+      : geoData.features;
 
     const finalGeoData = { ...geoData, features: processedFeatures };
 
     const svg = d3.select(ref.current)
       .attr("width", width)
       .attr("height", height);
-  svg.selectAll("*").remove();
+    svg.selectAll("*").remove();
 
     if (!finalGeoData || !finalGeoData.features) return;
-    
+
     // --- YENİ MANTIK ---
     let projection;
 
     if (mapName === "usa") {
       // D3'ün sihirli USA projeksiyonu (Alaska'yı taşıyan)
       projection = d3.geoAlbersUsa().fitSize([width, height], geoData);
-    } else {
+    }
+    else if (mapName === "europe") {
+
+      projection = d3.geoMercator()
+        .center([5, 55])
+        .scale(400)
+        .translate([width / 2, height / 2]);
+
+    }
+    else {
       // Türkiye ve Avrupa için standart Mercator
       projection = d3.geoMercator().fitSize([width, height], finalGeoData);
     }
@@ -149,13 +158,19 @@ export default function Map({ data = [], theme, geoData, mapName }) {
       .append("path")
       .attr("d", path)
       .attr("fill", d => {
-        const name = normalize(d.properties.name);
+        const rawName =
+          d.properties.name ||
+          d.properties.NAME ||
+          d.properties.admin ||
+          d.properties.STATE_NAME;
+
+        const name = normalize(rawName);
         const value = valueByCity[name];
         return value != null ? colorScale(value) : "#eee";
       })
       .attr("stroke", "#333")
       .on("mouseover", (event, d) => {
-        const name = d.properties.name;
+        const name = d.properties.name || d.properties.NAME || d.properties.admin || d.properties.STATE_NAME;
         const value = valueByCity[normalize(name)];
         tooltip
           .style("opacity", 1)
@@ -171,8 +186,30 @@ export default function Map({ data = [], theme, geoData, mapName }) {
       });
 
     // Legend (horizontal, bottom-center)
-    const legendX = (width - legendWidth) / 2 + 300;
-    const legendY = height - 170;
+    let legendX;
+let legendY;
+
+if (mapName === "turkey") {
+
+  legendX = width - 220;
+  legendY = height - 120;
+
+} else if (mapName === "europe") {
+
+  legendX = 40;
+  legendY = height - 120;
+
+} else if (mapName === "usa") {
+
+  legendX = width - 250;
+  legendY = 80;
+
+} else {
+
+  legendX = width - 220;
+  legendY = height - 120;
+
+}
 
     const legendScale = d3.scaleLinear()
       .domain(colorScale.domain())

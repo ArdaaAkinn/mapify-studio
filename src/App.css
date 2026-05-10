@@ -19,6 +19,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .sidebar h2 {
@@ -92,4 +95,63 @@ select {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid #ccc;
+}
+
+.data-table {
+  margin-top: auto;
+  background: rgba(255,255,255,0.08);
+  padding: 15px;
+  border-radius: 12px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.data-table h3 {
+  margin-top: 0;
+  color: white;
+}
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  color: #ddd;
+  font-size: 14px;
+  padding-bottom: 8px;
+}
+
+.data-table input {
+  width: 90%;
+  padding: 6px;
+  margin-bottom: 6px;
+  border: none;
+  border-radius: 6px;
+}
+
+.data-table button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.data-table input:disabled {
+  background: #ddd;
+  color: #333;
+  font-weight: bold;
+}
+
+.data-table::-webkit-scrollbar {
+  width: 8px;
+}
+
+.data-table::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 10px;
+}
+
+.upload-section {
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
