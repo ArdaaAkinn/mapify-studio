@@ -1,9 +1,9 @@
 export default function DataTable({ data, setData }) {
 
   const updateCell = (index, field, value) => {
-    const updated = [...data];
-    updated[index][field] = value;
-    setData(updated);
+    setData(data.map((row, rowIndex) =>
+      rowIndex === index ? { ...row, [field]: value } : row
+    ));
   };
 
   const addRow = () => {

@@ -77,6 +77,95 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
+.customize-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.customize-card h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.text-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.text-field input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  color: #111827;
+}
+
+.text-field input:focus {
+  outline: 3px solid #93c5fd;
+  border-color: #2563eb;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.switch-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  flex: 0 0 auto;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+.switch::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: 0.2s;
+}
+
+.switch-row input:checked + .switch {
+  background: #111827;
+}
+
+.switch-row input:checked + .switch::after {
+  transform: translateX(20px);
+}
+
+.switch-row input:focus-visible + .switch {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
 button {
   padding: 10px 14px;
   border: none;
