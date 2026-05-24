@@ -99,7 +99,8 @@ export default function Map({
   showPlaceNames = false,
   showPlaceValues = false,
   mapTitle = "",
-  legendTitle = ""
+  legendTitle = "",
+  mapType = "colored-regions"
 }) {
   const ref = useRef();
   const tooltipRef = useRef();
@@ -256,6 +257,22 @@ export default function Map({
       .domain([0, d3.max(data, d => +d.value) || 0])
       .interpolator(interpolators[theme] || d3.interpolateBlues);
 
+    const numericValues = data
+      .map(d => +d.value)
+      .filter(value => Number.isFinite(value));
+    const maxValue = d3.max(numericValues) || 0;
+    const bubbleSizeScale = d3.scaleSqrt()
+      .domain([0, maxValue || 1])
+      .range([4, 28]);
+
+    const hasPresenceValue = (value) => {
+      if (value == null) return false;
+      const textValue = value.toString().trim().toLowerCase();
+      if (!textValue) return false;
+      if (["0", "false", "no", "none", "absent"].includes(textValue)) return false;
+      return true;
+    };
+
     const wrapSvgText = ({
       text,
       content,
@@ -328,25 +345,27 @@ export default function Map({
       });
     };
 
-    // Gradient definition
+    // Legend gradient definition
     const legendWidth = 150;
     const legendHeight = 15;
 
     const defs = svg.append("defs");
-    const linearGradient = defs.append("linearGradient")
-      .attr("id", "legend-gradient")
-      .attr("x1", "0%")
-      .attr("y1", "0%")
-      .attr("x2", "100%")
-      .attr("y2", "0%");
+    if (mapType === "colored-regions") {
+      const linearGradient = defs.append("linearGradient")
+        .attr("id", "legend-gradient")
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "0%");
 
-    d3.range(0, 1.01, 0.1).forEach(t => {
-      linearGradient.append("stop")
-        .attr("offset", `${t * 100}%`)
-        .attr("stop-color", colorScale(
-          colorScale.domain()[0] + t * (colorScale.domain()[1] - colorScale.domain()[0])
-        ));
-    });
+      d3.range(0, 1.01, 0.1).forEach(t => {
+        linearGradient.append("stop")
+          .attr("offset", `${t * 100}%`)
+          .attr("stop-color", colorScale(
+            colorScale.domain()[0] + t * (colorScale.domain()[1] - colorScale.domain()[0])
+          ));
+      });
+    }
 
     if (mapTitle.trim()) {
       const titleText = svg.append("text")
@@ -389,9 +408,18 @@ export default function Map({
       .attr("d", path)
       .attr("fill", d => {
         const rawName = getFeatureName(d);
-
         const name = normalize(rawName);
+        const rawValue = displayValueByCity[name];
         const value = valueByCity[name];
+
+        if (mapType === "two-color-status") {
+          return hasPresenceValue(rawValue) ? "#2563eb" : "#dc2626";
+        }
+
+        if (mapType === "circles-by-value") {
+          return "#f3f4f6";
+        }
+
         return value != null ? colorScale(value) : "#eee";
       })
       .attr("stroke", "#333")
@@ -410,6 +438,44 @@ export default function Map({
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
       });
+
+    if (mapType === "circles-by-value") {
+      svg.append("g")
+        .attr("class", "map-bubbles")
+        .selectAll("circle")
+        .data(finalGeoData.features)
+        .enter()
+        .append("circle")
+        .attr("cx", d => getLabelPoint(d)[0])
+        .attr("cy", d => getLabelPoint(d)[1])
+        .attr("r", d => {
+          const value = valueByCity[normalize(getFeatureName(d))];
+          return value > 0 ? bubbleSizeScale(value) : 0;
+        })
+        .attr("fill", "#f97316")
+        .attr("fill-opacity", 0.72)
+        .attr("stroke", "#9a3412")
+        .attr("stroke-width", 1)
+        .style("display", d => {
+          const [x, y] = getLabelPoint(d);
+          return Number.isFinite(x) && Number.isFinite(y) ? null : "none";
+        })
+        .on("mouseover", (event, d) => {
+          const name = getFeatureName(d);
+          const value = valueByCity[normalize(name)];
+          tooltip
+            .style("opacity", 1)
+            .html(`${name}: ${value ?? "No data"}`);
+        })
+        .on("mousemove", (event) => {
+          tooltip
+            .style("left", event.pageX + 10 + "px")
+            .style("top", event.pageY + 10 + "px");
+        })
+        .on("mouseout", () => {
+          tooltip.style("opacity", 0);
+        });
+    }
 
     if (showPlaceNames || showPlaceValues) {
       const labels = svg.append("g")
@@ -610,10 +676,6 @@ if (mapName === "turkey") {
 
 }
 
-    const legendScale = d3.scaleLinear()
-      .domain(colorScale.domain())
-      .range([0, legendWidth]);
-
     if (legendTitle.trim()) {
       const legendTitleText = svg.append("text")
         .attr("x", legendX)
@@ -634,18 +696,80 @@ if (mapName === "turkey") {
       });
     }
 
-    svg.append("rect")
-      .attr("x", legendX)
-      .attr("y", legendY)
-      .attr("width", legendWidth)
-      .attr("height", legendHeight)
-      .style("fill", "url(#legend-gradient)");
+    if (mapType === "colored-regions") {
+      const legendScale = d3.scaleLinear()
+        .domain(colorScale.domain())
+        .range([0, legendWidth]);
 
-    svg.append("g")
-      .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
-      .call(d3.axisBottom(legendScale).ticks(5));
+      svg.append("rect")
+        .attr("x", legendX)
+        .attr("y", legendY)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", "url(#legend-gradient)");
 
-  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle]);
+      svg.append("g")
+        .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
+        .call(d3.axisBottom(legendScale).ticks(5));
+    }
+
+    if (mapType === "two-color-status") {
+      const binaryLegend = svg.append("g")
+        .attr("transform", `translate(${legendX}, ${legendY})`)
+        .style("font-family", "Arial, sans-serif")
+        .attr("font-size", 12)
+        .attr("fill", "#111827");
+
+      [
+        { label: "Present", color: "#2563eb" },
+        { label: "Absent", color: "#dc2626" }
+      ].forEach((item, index) => {
+        const y = index * 22;
+        binaryLegend.append("rect")
+          .attr("x", 0)
+          .attr("y", y)
+          .attr("width", 14)
+          .attr("height", 14)
+          .attr("fill", item.color);
+
+        binaryLegend.append("text")
+          .attr("x", 22)
+          .attr("y", y + 11)
+          .text(item.label);
+      });
+    }
+
+    if (mapType === "circles-by-value") {
+      const bubbleLegend = svg.append("g")
+        .attr("transform", `translate(${legendX}, ${legendY})`)
+        .style("font-family", "Arial, sans-serif")
+        .attr("font-size", 12)
+        .attr("fill", "#111827");
+
+      const legendValues = [Math.round(maxValue / 2), maxValue]
+        .filter((value, index, values) => value > 0 && values.indexOf(value) === index);
+
+      legendValues.forEach((value, index) => {
+        const x = index * 72 + 16;
+        const radius = bubbleSizeScale(value);
+
+        bubbleLegend.append("circle")
+          .attr("cx", x)
+          .attr("cy", 28 - radius)
+          .attr("r", radius)
+          .attr("fill", "#f97316")
+          .attr("fill-opacity", 0.72)
+          .attr("stroke", "#9a3412");
+
+        bubbleLegend.append("text")
+          .attr("x", x)
+          .attr("y", 46)
+          .attr("text-anchor", "middle")
+          .text(value);
+      });
+    }
+
+  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType]);
 
   return <svg ref={ref}></svg>;
 }

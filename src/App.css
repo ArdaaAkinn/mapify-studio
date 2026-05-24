@@ -93,6 +93,54 @@ body {
   color: #111827;
 }
 
+.map-type-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.map-type-option {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  color: #374151;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.map-type-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-type-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-type-option strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.map-type-option small {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.map-type-option:hover {
+  border-color: #93c5fd;
+}
+
+.map-type-option.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px #dbeafe;
+  background: #f8fbff;
+}
+
 .text-field {
   display: flex;
   flex-direction: column;

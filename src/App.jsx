@@ -7,6 +7,24 @@ import turkey from "./data/turkey.json";
 import europe from "./data/europe.json";
 import usa from "./data/usa.json";
 
+const mapTypeOptions = [
+  {
+    id: "colored-regions",
+    label: "Colored regions",
+    description: "Fill each place by numeric value."
+  },
+  {
+    id: "two-color-status",
+    label: "Two-color status",
+    description: "Show present or absent with two colors."
+  },
+  {
+    id: "circles-by-value",
+    label: "Circles by value",
+    description: "Keep places neutral and draw sized circles."
+  }
+];
+
 const createMapRows = (selectedMap) => {
   if (!selectedMap?.features) return [];
 
@@ -33,6 +51,7 @@ function App() {
   const [showPlaceValues, setShowPlaceValues] = useState(false);
   const [mapTitle, setMapTitle] = useState("");
   const [legendTitle, setLegendTitle] = useState("");
+  const [mapType, setMapType] = useState("colored-regions");
   const handleMapSelect = (map) => {
     const rows = createMapRows(map);
     setSelectedMap(map);
@@ -131,6 +150,7 @@ function App() {
             showPlaceValues={showPlaceValues}
             mapTitle={mapTitle}
             legendTitle={legendTitle}
+            mapType={mapType}
             />
           </div>
         </div>
@@ -158,6 +178,27 @@ function App() {
 
         <div className="customize-card">
           <h2>Customize Map</h2>
+
+          <div className="map-type-group" role="radiogroup" aria-label="Map type">
+            {mapTypeOptions.map(option => (
+              <label
+                key={option.id}
+                className={`map-type-option ${mapType === option.id ? "selected" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="mapType"
+                  value={option.id}
+                  checked={mapType === option.id}
+                  onChange={(e) => setMapType(e.target.value)}
+                />
+                <span>
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                </span>
+              </label>
+            ))}
+          </div>
 
           <label className="text-field">
             <span>Map title</span>
