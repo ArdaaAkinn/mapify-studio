@@ -8,6 +8,20 @@ import turkey from "./data/turkey.json";
 import europe from "./data/europe.json";
 import usa from "./data/usa.json";
 import canada from "./data/canada.json";
+import germany from "./data/germany.json";
+import franceRaw from "./data/france.geojson?raw";
+import italyRaw from "./data/italy.geojson?raw";
+import spainRaw from "./data/spain.geojson?raw";
+import greeceRaw from "./data/greece.geojson?raw";
+import russiaRaw from "./data/russia.geojson?raw";
+import ukRaw from "./data/uk.geojson?raw";
+
+const france = JSON.parse(franceRaw);
+const italy = JSON.parse(italyRaw);
+const spain = JSON.parse(spainRaw);
+const greece = JSON.parse(greeceRaw);
+const russia = JSON.parse(russiaRaw);
+const uk = JSON.parse(ukRaw);
 
 const mapCatalog = [
   {
@@ -45,6 +59,69 @@ const mapCatalog = [
     globeColor: "#a855f7",
     labelCoordinates: [-106, 57],
     globeRadius: 18
+  },
+  {
+    id: "germany",
+    label: "Germany",
+    shortLabel: "Germany",
+    geoData: germany,
+    globeColor: "#14b8a6",
+    labelCoordinates: [10.4, 51.1],
+    globeRadius: 5
+  },
+  {
+    id: "france",
+    label: "France",
+    shortLabel: "France",
+    geoData: france,
+    globeColor: "#0ea5e9",
+    labelCoordinates: [2.2, 46.2],
+    globeRadius: 6
+  },
+  {
+    id: "italy",
+    label: "Italy",
+    shortLabel: "Italy",
+    geoData: italy,
+    globeColor: "#84cc16",
+    labelCoordinates: [12.6, 42.8],
+    globeRadius: 5
+  },
+  {
+    id: "spain",
+    label: "Spain",
+    shortLabel: "Spain",
+    geoData: spain,
+    globeColor: "#eab308",
+    labelCoordinates: [-3.7, 40.4],
+    globeRadius: 6
+  },
+  {
+    id: "greece",
+    label: "Greece",
+    shortLabel: "Greece",
+    geoData: greece,
+    globeColor: "#06b6d4",
+    labelCoordinates: [22, 39],
+    globeRadius: 5
+  },
+  {
+    id: "russia",
+    label: "Russia",
+    shortLabel: "Russia",
+    geoData: russia,
+    globeColor: "#ef4444",
+    labelCoordinates: [40, 58],
+    globeRadius: 15
+  },
+  {
+    id: "uk",
+    label: "United Kingdom",
+    shortLabel: "UK",
+    geoData: uk,
+    globeColor: "#6366f1",
+    labelCoordinates: [-2, 54],
+    globeRadius: 5
   }
 ];
 
@@ -73,9 +150,13 @@ const createMapRows = (selectedMap) => {
 
     const name =
       feature.properties.name ||
+      feature.properties.nom ||
+      feature.properties.reg_name ||
       feature.properties.NAME ||
       feature.properties.admin ||
-      feature.properties.STATE_NAME;
+      feature.properties.STATE_NAME ||
+      feature.properties.region ||
+      feature.properties.county;
 
     return {
       city: name,
@@ -94,6 +175,7 @@ function App() {
   const initialMapId = getMapIdFromPath();
   const initialMap = mapCatalog.find(map => map.id === initialMapId) || mapCatalog[0];
   const [screen, setScreen] = useState(initialMapId ? "studio" : "globe");
+  const [globeGroup, setGlobeGroup] = useState(null);
   const [selectedMapConfig, setSelectedMapConfig] = useState(initialMap);
   const [loadingMapConfig, setLoadingMapConfig] = useState(null);
   const [data, setData] = useState(() => createMapRows(initialMap.geoData));
@@ -131,6 +213,7 @@ function App() {
 
   const openGlobe = () => {
     setScreen("globe");
+    setGlobeGroup(null);
     window.history.pushState({}, "", "/");
   };
 
@@ -203,25 +286,37 @@ function App() {
         <section className="globe-panel">
           <div className="globe-copy">
             <p className="globe-kicker">Mapify Studio</p>
-            <h1>{screen === "loading" ? `Opening ${loadingMapConfig?.label}` : "Choose a map from the world"}</h1>
+            <h1>{screen === "loading" ? `Opening ${loadingMapConfig?.label}` : globeGroup === "europe" ? "Choose a European map" : "Choose a map from the world"}</h1>
             <p>
               {screen === "loading"
                 ? "Preparing the editor with the map, data table, and customization controls."
+                : globeGroup === "europe"
+                ? "Click a country on the globe or pick from the list below."
                 : "Click an available region on the rotating earth to open its map editor."}
             </p>
+            {globeGroup === "europe" && screen !== "loading" && (
+              <button className="back-to-world-btn" onClick={() => setGlobeGroup(null)}>
+                ← All regions
+              </button>
+            )}
           </div>
 
           <WorldGlobe
             maps={mapCatalog}
             onSelectMap={(mapId) => openStudioMap(mapId, true, true)}
+            onSelectGroup={(group) => setGlobeGroup(group)}
             activeMapId={loadingMapConfig?.id}
+            globeGroup={globeGroup}
           />
 
           <div className="globe-map-list" aria-label="Available maps">
-            {mapCatalog.map(map => (
+            {(globeGroup === "europe"
+              ? mapCatalog.filter(m => ["europe", "germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
+              : mapCatalog.filter(m => !["germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
+            ).map(map => (
               <button
                 key={map.id}
-                onClick={() => openStudioMap(map.id, true, true)}
+                onClick={() => (!globeGroup && map.id === "europe") ? setGlobeGroup("europe") : openStudioMap(map.id, true, true)}
                 disabled={screen === "loading"}
               >
                 {map.label}

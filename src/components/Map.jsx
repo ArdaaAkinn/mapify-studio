@@ -43,6 +43,22 @@ const visualLabelAliases = {
     "Newfoundland and Labrador": "Nfld. & Lab.",
     "Prince Edward Island": "P.E.I.",
     "Saskatchewan": "Sask.",
+  },
+  italy: {
+    "Trentino-Alto Adige/Südtirol": "Trentino",
+    "Friuli Venezia Giulia": "Friuli V.G.",
+    "Valle d'Aosta/Vallée d'Aoste": "Valle d'Aosta",
+  },
+  spain: {
+    "Castilla-La Mancha": "Castilla L.M.",
+    "Castilla y León": "Castilla y L.",
+    "Bizkaia/Vizcaya": "B.",
+    "Gipuzkoa/Guipúzcoa": "G.",
+    "Araba/Álava": "Álava",
+    "Illes Balears": "Balears",
+    "València/Valencia": "Valencia",
+    "Alacant/Alicante": "Alicante",
+    "Castelló/Castellón": "Castellón",
   }
 };
 
@@ -78,6 +94,9 @@ const visualLabelCoordinates = {
   canada: {
     "Northwest Territories": [-115, 64],
     "Nunavut": [-100, 66]
+  },
+  germany: {
+    Brandenburg: [13.7, 52.1]
   }
 
 };
@@ -219,8 +238,17 @@ export default function Map({
         .translate([width / 2, height / 2]);
 
     }
+    else if (mapName === "russia") {
+      // Rotate central meridian to 105°E so D3's antimeridian clipper (±180°)
+      // lands in the Atlantic, keeping all Russian territory in one piece.
+      const topPad = mapTitle.trim() ? 55 : 8;
+      projection = d3.geoMercator()
+        .rotate([-105, 0, 0])
+        .fitExtent([[8, topPad], [width - 8, height - 8]], finalGeoData);
+    }
     else {
-      projection = d3.geoMercator().fitSize([width, height], finalGeoData);
+      const topPad = mapTitle.trim() ? 55 : 8;
+      projection = d3.geoMercator().fitExtent([[8, topPad], [width - 8, height - 8]], finalGeoData);
     }
 
     const path = d3.geoPath().projection(projection);
@@ -237,9 +265,13 @@ export default function Map({
 
     const getFeatureName = (feature) =>
       feature.properties.name ||
+      feature.properties.nom ||
+      feature.properties.reg_name ||
       feature.properties.NAME ||
       feature.properties.admin ||
-      feature.properties.STATE_NAME;
+      feature.properties.STATE_NAME ||
+      feature.properties.region ||
+      feature.properties.county;
 
     const getVisualLabel = (name) =>
       visualLabelAliases[mapName]?.[name] || name;
@@ -691,7 +723,26 @@ if (mapName === "turkey") {
   legendX = width - 260;
   legendY = height - 350;
 
-} else {
+} else if (mapName === "greece") {
+
+  legendX = width - 220;
+  legendY = height - 300;
+
+} else if (mapName === "uk") {
+
+  legendX = width - 160;
+  legendY = height - 230;
+
+}else if (mapName === "russia") {
+
+  legendX = width - 640;
+  legendY = height - 90;
+}else if (mapName === "france") {
+
+  legendX = width - 340;
+  legendY = height - 60;
+}
+else {
 
   legendX = width - 220;
   legendY = height - 120;
