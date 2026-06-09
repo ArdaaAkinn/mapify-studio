@@ -1,11 +1,52 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Map from "./components/Map";
 import Upload from "./components/Upload";
 import "./App.css";
 import DataTable from "./components/DataTable";
+import WorldGlobe from "./components/WorldGlobe";
 import turkey from "./data/turkey.json";
 import europe from "./data/europe.json";
 import usa from "./data/usa.json";
+import canada from "./data/canada.json";
+
+const mapCatalog = [
+  {
+    id: "turkey",
+    label: "Turkey",
+    shortLabel: "Turkey",
+    geoData: turkey,
+    globeColor: "#f97316",
+    labelCoordinates: [35.2, 39],
+    globeRadius: 5
+  },
+  {
+    id: "europe",
+    label: "Europe",
+    shortLabel: "Europe",
+    geoData: europe,
+    globeColor: "#22c55e",
+    labelCoordinates: [14, 51],
+    globeRadius: 23
+  },
+  {
+    id: "usa",
+    label: "USA",
+    shortLabel: "USA",
+    geoData: usa,
+    globeColor: "#f43f5e",
+    labelCoordinates: [-98, 39],
+    globeRadius: 16
+  },
+  {
+    id: "canada",
+    label: "Canada",
+    shortLabel: "Canada",
+    geoData: canada,
+    globeColor: "#a855f7",
+    labelCoordinates: [-106, 57],
+    globeRadius: 18
+  }
+];
 
 const mapTypeOptions = [
   {
@@ -44,19 +85,53 @@ const createMapRows = (selectedMap) => {
 };
 
 function App() {
-  const [selectedMap, setSelectedMap] = useState(turkey);
-  const [data, setData] = useState(() => createMapRows(turkey));
+  const getMapIdFromPath = () => {
+    const match = window.location.pathname.match(/^\/maps\/([^/]+)/);
+    const mapId = match?.[1];
+    return mapCatalog.some(map => map.id === mapId) ? mapId : null;
+  };
+
+  const initialMapId = getMapIdFromPath();
+  const initialMap = mapCatalog.find(map => map.id === initialMapId) || mapCatalog[0];
+  const [screen, setScreen] = useState(initialMapId ? "studio" : "globe");
+  const [selectedMapConfig, setSelectedMapConfig] = useState(initialMap);
+  const [loadingMapConfig, setLoadingMapConfig] = useState(null);
+  const [data, setData] = useState(() => createMapRows(initialMap.geoData));
   const [mapData, setMapData] = useState(data);
   const [showPlaceNames, setShowPlaceNames] = useState(false);
   const [showPlaceValues, setShowPlaceValues] = useState(false);
   const [mapTitle, setMapTitle] = useState("");
   const [legendTitle, setLegendTitle] = useState("");
   const [mapType, setMapType] = useState("colored-regions");
-  const handleMapSelect = (map) => {
-    const rows = createMapRows(map);
-    setSelectedMap(map);
-    setData(rows);
-    setMapData(rows);
+
+  const openStudioMap = useCallback((mapId, shouldPush = true, withTransition = false) => {
+    const mapConfig = mapCatalog.find(map => map.id === mapId) || mapCatalog[0];
+    const rows = createMapRows(mapConfig.geoData);
+
+    const showStudio = () => {
+      setSelectedMapConfig(mapConfig);
+      setData(rows);
+      setMapData(rows);
+      setLoadingMapConfig(null);
+      setScreen("studio");
+
+      if (shouldPush) {
+        window.history.pushState({ mapId: mapConfig.id }, "", `/maps/${mapConfig.id}`);
+      }
+    };
+
+    if (withTransition) {
+      setLoadingMapConfig(mapConfig);
+      setScreen("loading");
+      window.setTimeout(showStudio, 650);
+    } else {
+      showStudio();
+    }
+  }, []);
+
+  const openGlobe = () => {
+    setScreen("globe");
+    window.history.pushState({}, "", "/");
   };
 
   useEffect(() => {
@@ -67,8 +142,26 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [data]);
 
+  useEffect(() => {
+    const handlePopState = () => {
+      const mapId = getMapIdFromPath();
+
+      if (mapId) {
+        openStudioMap(mapId, false);
+      } else {
+        setScreen("globe");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [openStudioMap]);
+
   const downloadImage = () => {
-    const svg = document.querySelector("svg");
+    const svg = document.querySelector(".map-container svg");
+    if (!svg) return;
+
     const width = 800;
     const height = 600;
     const scale = 4;
@@ -104,24 +197,69 @@ function App() {
   };
   const [theme, setTheme] = useState("Blues");
 
+  if (screen === "globe" || screen === "loading") {
+    return (
+      <main className={`globe-page ${screen === "loading" ? "is-loading" : ""}`}>
+        <section className="globe-panel">
+          <div className="globe-copy">
+            <p className="globe-kicker">Mapify Studio</p>
+            <h1>{screen === "loading" ? `Opening ${loadingMapConfig?.label}` : "Choose a map from the world"}</h1>
+            <p>
+              {screen === "loading"
+                ? "Preparing the editor with the map, data table, and customization controls."
+                : "Click an available region on the rotating earth to open its map editor."}
+            </p>
+          </div>
+
+          <WorldGlobe
+            maps={mapCatalog}
+            onSelectMap={(mapId) => openStudioMap(mapId, true, true)}
+            activeMapId={loadingMapConfig?.id}
+          />
+
+          <div className="globe-map-list" aria-label="Available maps">
+            {mapCatalog.map(map => (
+              <button
+                key={map.id}
+                onClick={() => openStudioMap(map.id, true, true)}
+                disabled={screen === "loading"}
+              >
+                {map.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {screen === "loading" && (
+          <div className="loading-overlay" aria-live="polite">
+            <div className="loading-spinner"></div>
+            <span>Loading map studio</span>
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <div className="app">
 
       {/* Sidebar */}
       <div className="sidebar">
-        <h2>🗺️ Maps</h2>
-
-  <button onClick={() => handleMapSelect(turkey)}>
-    Turkey
-  </button>
-
-        <button onClick={() => handleMapSelect(europe)}>
-          Europe
+        <button className="back-button" onClick={openGlobe}>
+          Back to Globe
         </button>
 
-        <button onClick={() => handleMapSelect(usa)}>
-          USA
-        </button>
+        <h2>Maps</h2>
+
+        {mapCatalog.map(map => (
+          <button
+            key={map.id}
+            className={selectedMapConfig.id === map.id ? "selected-map-button" : ""}
+            onClick={() => openStudioMap(map.id)}
+          >
+            {map.label}
+          </button>
+        ))}
 
         <div className="upload-section">
     <Upload onData={setData} />
@@ -144,8 +282,8 @@ function App() {
             <Map 
             data={mapData} 
             theme={theme} 
-            geoData={selectedMap} 
-            mapName={selectedMap === turkey ? "turkey" : selectedMap === usa ? "usa" : "europe"}
+            geoData={selectedMapConfig.geoData} 
+            mapName={selectedMapConfig.id}
             showPlaceNames={showPlaceNames}
             showPlaceValues={showPlaceValues}
             mapTitle={mapTitle}

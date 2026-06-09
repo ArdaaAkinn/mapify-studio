@@ -36,6 +36,13 @@ const visualLabelAliases = {
     "Delaware": "Del.",
     "Vermont": "Vt.",
     "District of Columbia": "D.C.",
+  },
+  canada:
+  {
+    "British Columbia": "B.C.",
+    "Newfoundland and Labrador": "Nfld. & Lab.",
+    "Prince Edward Island": "P.E.I.",
+    "Saskatchewan": "Sask.",
   }
 };
 
@@ -66,8 +73,13 @@ const visualLabelCoordinates = {
   usa: {
     Mississippi: [-89.65, 31.7],
     Alabama: [-86.8, 33.4]
-  
+  },
+
+  canada: {
+    "Northwest Territories": [-115, 64],
+    "Nunavut": [-100, 66]
   }
+
 };
 
 const labelsKeptOnMap = {
@@ -368,10 +380,15 @@ export default function Map({
     }
 
     if (mapTitle.trim()) {
+      const titleX = mapName === "canada" ? 28 : width / 2;
+      const titleY = mapName === "canada" ? 42 : 28;
+      const titleAnchor = mapName === "canada" ? "start" : "middle";
+      const titleMaxWidth = mapName === "canada" ? 240 : width - 48;
+
       const titleText = svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", 28)
-        .attr("text-anchor", "middle")
+        .attr("x", titleX)
+        .attr("y", titleY)
+        .attr("text-anchor", titleAnchor)
         .attr("font-size", 22)
         .attr("font-weight", 700)
         .attr("fill", "#111827")
@@ -380,9 +397,9 @@ export default function Map({
       wrapSvgText({
         text: titleText,
         content: mapTitle,
-        maxWidth: width - 48,
-        x: width / 2,
-        y: 28,
+        maxWidth: titleMaxWidth,
+        x: titleX,
+        y: titleY,
         lineHeight: 26
       });
     }
@@ -668,6 +685,11 @@ if (mapName === "turkey") {
 
   legendX = width - 320;
   legendY = height - 100;
+
+} else if (mapName === "canada") {
+
+  legendX = width - 260;
+  legendY = height - 350;
 
 } else {
 
