@@ -147,7 +147,6 @@ const createMapRows = (selectedMap) => {
   if (!selectedMap?.features) return [];
 
   return selectedMap.features.map(feature => {
-
     const name =
       feature.properties.name ||
       feature.properties.nom ||
@@ -185,6 +184,8 @@ function App() {
   const [mapTitle, setMapTitle] = useState("");
   const [legendTitle, setLegendTitle] = useState("");
   const [mapType, setMapType] = useState("colored-regions");
+  const [theme, setTheme] = useState("Blues");
+  const [darkBackground, setDarkBackground] = useState(false);
 
   const openStudioMap = useCallback((mapId, shouldPush = true, withTransition = false) => {
     const mapConfig = mapCatalog.find(map => map.id === mapId) || mapCatalog[0];
@@ -267,7 +268,7 @@ function App() {
       canvas.height = height * scale;
 
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = darkBackground ? "#0f172a" : "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.drawImage(image, 0, 0, width, height);
@@ -278,7 +279,6 @@ function App() {
       link.click();
     };
   };
-  const [theme, setTheme] = useState("Blues");
 
   if (screen === "globe" || screen === "loading") {
     return (
@@ -338,85 +338,59 @@ function App() {
   return (
     <div className="app">
 
-      {/* Sidebar */}
-      <div className="sidebar">
-        <button className="back-button" onClick={openGlobe}>
-          Back to Globe
-        </button>
+      {/* Sidebar — navigation only */}
+      <aside className="sidebar">
+        <button className="back-button" onClick={openGlobe}>← Globe</button>
+        <p className="nav-label">Maps</p>
+        <nav>
+          {mapCatalog.map(map => (
+            <button
+              key={map.id}
+              className={`map-nav-btn${selectedMapConfig.id === map.id ? " active" : ""}`}
+              onClick={() => openStudioMap(map.id)}
+            >
+              <span className="map-nav-dot" style={{ background: map.globeColor }} />
+              {map.label}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-        <h2>Maps</h2>
-
-        {mapCatalog.map(map => (
-          <button
-            key={map.id}
-            className={selectedMapConfig.id === map.id ? "selected-map-button" : ""}
-            onClick={() => openStudioMap(map.id)}
-          >
-            {map.label}
-          </button>
-        ))}
-
-        <div className="upload-section">
-    <Upload onData={setData} />
-  </div>
-  
-        <DataTable
-  data={data}
-  setData={setData}
-/>
-      </div>
-
-      {/* Main Content */}
-      <div className="main">
-
-        {/* Map Card */}
+      {/* Editor area — map + data table */}
+      <div className="editor-area">
         <div className="map-card">
-          <h1>Mapify Studio</h1>
-
-          <div className="map-container">
-            <Map 
-            data={mapData} 
-            theme={theme} 
-            geoData={selectedMapConfig.geoData} 
-            mapName={selectedMapConfig.id}
-            showPlaceNames={showPlaceNames}
-            showPlaceValues={showPlaceValues}
-            mapTitle={mapTitle}
-            legendTitle={legendTitle}
-            mapType={mapType}
+          <h2 className="map-card-title">{selectedMapConfig.label}</h2>
+          <div className={`map-container${darkBackground ? " dark-bg" : ""}`}>
+            <Map
+              data={mapData}
+              theme={theme}
+              geoData={selectedMapConfig.geoData}
+              mapName={selectedMapConfig.id}
+              showPlaceNames={showPlaceNames}
+              showPlaceValues={showPlaceValues}
+              mapTitle={mapTitle}
+              legendTitle={legendTitle}
+              mapType={mapType}
+              darkBackground={darkBackground}
             />
           </div>
         </div>
 
-        {/* Controls Card */}
-        <div className="controls-card">
-
-          <Upload onData={setData} />
-
-          <select
-            onChange={(e) => setTheme(e.target.value)}
-            value={theme}
-          >
-            <option value="Blues">Blues</option>
-            <option value="Reds">Reds</option>
-            <option value="Greens">Greens</option>
-            <option value="Viridis">Viridis</option>
-          </select>
-
-          <button onClick={downloadImage}>
-            Download Map
-          </button>
-
+        <div className="data-panel">
+          <DataTable data={data} setData={setData} />
         </div>
+      </div>
 
-        <div className="customize-card">
-          <h2>Customize Map</h2>
+      {/* Controls panel — all settings */}
+      <aside className="controls-panel">
 
-          <div className="map-type-group" role="radiogroup" aria-label="Map type">
+        <div className="panel-section">
+          <h3 className="panel-section-title">Map type</h3>
+          <div className="map-type-group">
             {mapTypeOptions.map(option => (
               <label
                 key={option.id}
-                className={`map-type-option ${mapType === option.id ? "selected" : ""}`}
+                className={`map-type-option${mapType === option.id ? " selected" : ""}`}
               >
                 <input
                   type="radio"
@@ -432,29 +406,52 @@ function App() {
               </label>
             ))}
           </div>
+        </div>
 
+        <div className="panel-section">
+          <h3 className="panel-section-title">Appearance</h3>
+          <label className="switch-row">
+            <span>Dark background</span>
+            <input
+              type="checkbox"
+              checked={darkBackground}
+              onChange={(e) => setDarkBackground(e.target.checked)}
+            />
+            <span className="switch" aria-hidden="true"></span>
+          </label>
+          <label className="text-field">
+            <span>Color theme</span>
+            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+              <option value="Blues">Blues</option>
+              <option value="Reds">Reds</option>
+              <option value="Greens">Greens</option>
+              <option value="Viridis">Viridis</option>
+            </select>
+          </label>
           <label className="text-field">
             <span>Map title</span>
             <input
               type="text"
               value={mapTitle}
               onChange={(e) => setMapTitle(e.target.value)}
-              placeholder="Write map title"
+              placeholder="Add a map title"
             />
           </label>
-
           <label className="text-field">
             <span>Legend title</span>
             <input
               type="text"
               value={legendTitle}
               onChange={(e) => setLegendTitle(e.target.value)}
-              placeholder="Population, sales, score..."
+              placeholder="Population, sales, score…"
             />
           </label>
+        </div>
 
+        <div className="panel-section">
+          <h3 className="panel-section-title">Labels</h3>
           <label className="switch-row">
-            <span>Show city/district names</span>
+            <span>Show place names</span>
             <input
               type="checkbox"
               checked={showPlaceNames}
@@ -462,9 +459,8 @@ function App() {
             />
             <span className="switch" aria-hidden="true"></span>
           </label>
-
           <label className="switch-row">
-            <span>Show assigned values</span>
+            <span>Show values</span>
             <input
               type="checkbox"
               checked={showPlaceValues}
@@ -473,7 +469,14 @@ function App() {
             <span className="switch" aria-hidden="true"></span>
           </label>
         </div>
-      </div>
+
+        <div className="panel-section">
+          <h3 className="panel-section-title">Data &amp; Export</h3>
+          <Upload onData={setData} />
+          <button className="download-btn" onClick={downloadImage}>↓ Download PNG</button>
+        </div>
+
+      </aside>
     </div>
   );
 }

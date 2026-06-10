@@ -131,7 +131,8 @@ export default function Map({
   showPlaceValues = false,
   mapTitle = "",
   legendTitle = "",
-  mapType = "colored-regions"
+  mapType = "colored-regions",
+  darkBackground = false
 }) {
   const ref = useRef();
   const tooltipRef = useRef();
@@ -166,6 +167,7 @@ export default function Map({
     const LIMIT_LAT = 71;
     const LIMIT_LON_EAST = 45;
     const LIMIT_LON_WEST = -25;
+    const CANADA_LAT_LIMIT = 74;
     const processedFeatures = mapName === "europe"
       ? geoData.features.map(f => {
         const countryName = f.properties?.name || f.id || "";
@@ -190,7 +192,7 @@ export default function Map({
               // 2. Çok batıdaki (denizaşırı) parçaları at
               if (lon < LIMIT_LON_WEST) return false;
 
-              // 3. RUSYA ANAKARASI İÇİN ÖZEL DURUM: 
+              // 3. RUSYA ANAKARASI İÇİN ÖZEL DURUM:
               // Eğer parça çok büyükse (anakara ise) boylam sınırına bakma, kalsın.
               // Küçük bir ada ise ve çok doğudaysa onu at.
               if (countryName.includes("Russia") && lon > LIMIT_LON_EAST) {
@@ -212,6 +214,18 @@ export default function Map({
         }
         return f; // Diğer ülkeler (Polonya vb.) dokunulmadan kalır
       })
+      : mapName === "canada"
+      ? geoData.features.map(f => {
+        if (f.geometry.type !== "MultiPolygon") return f;
+        const filtered = f.geometry.coordinates.filter(poly => {
+          const minLat = Math.min(...poly[0].map(p => p[1]));
+          return minLat <= CANADA_LAT_LIMIT;
+        });
+        return {
+          ...f,
+          geometry: { ...f.geometry, coordinates: filtered.length ? filtered : [f.geometry.coordinates[0]] }
+        };
+      })
       : geoData.features;
 
     const finalGeoData = { ...geoData, features: processedFeatures };
@@ -222,6 +236,24 @@ export default function Map({
     svg.selectAll("*").remove();
 
     if (!finalGeoData || !finalGeoData.features) return;
+
+    const textFill        = darkBackground ? "#f1f5f9" : "#111827";
+    const noDataFill      = darkBackground ? "#1e293b" : "#eee";
+    const circleBaseFill  = darkBackground ? "#1e293b" : "#f3f4f6";
+    const pathStroke      = darkBackground ? "rgba(255,255,255,0.14)" : "#333";
+    const labelStroke     = darkBackground ? "#0f172a" : "#ffffff";
+    const labelShadow     = darkBackground
+      ? "drop-shadow(0 1px 2px rgba(0,0,0,0.9))"
+      : "drop-shadow(0 1px 1px rgba(255,255,255,0.65))";
+    const leaderStroke    = darkBackground ? "rgba(203,213,225,0.55)" : "#4b5563";
+    const arrowFill       = darkBackground ? "rgba(203,213,225,0.8)" : "#4b5563";
+
+    if (darkBackground) {
+      svg.append("rect")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("fill", "#0f172a");
+    }
 
     // --- YENİ MANTIK ---
     let projection;
@@ -237,6 +269,17 @@ export default function Map({
         .scale(570)
         .translate([width / 2, height / 2]);
 
+    }
+    else if (mapName === "uk") {
+      // fitExtent centers on the full bbox, but Eilean Siar extends to -13.7°,
+      // pulling the center far west and pushing Great Britain off to the right.
+      // Fix: use the same scale from fitExtent, then re-center the translate on -2°
+      // (center of Great Britain mainland) instead of the skewed bbox center.
+      const topPad = mapTitle.trim() ? 55 : 8;
+      projection = d3.geoMercator().fitExtent([[8, topPad], [width - 8, height - 8]], finalGeoData);
+      const [, ty] = projection.translate();
+      const s = projection.scale();
+      projection.translate([width / 2 + s * (2 * Math.PI / 180), ty]);
     }
     else if (mapName === "russia") {
       // Rotate central meridian to 105°E so D3's antimeridian clipper (±180°)
@@ -423,7 +466,7 @@ export default function Map({
         .attr("text-anchor", titleAnchor)
         .attr("font-size", 22)
         .attr("font-weight", 700)
-        .attr("fill", "#111827")
+        .attr("fill", textFill)
         .style("font-family", "Arial, sans-serif");
 
       wrapSvgText({
@@ -445,7 +488,7 @@ export default function Map({
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,0 L6,3 L0,6 Z")
-      .attr("fill", "#4b5563");
+      .attr("fill", arrowFill);
 
     // Map paths
     svg.append("g")
@@ -466,12 +509,12 @@ export default function Map({
         }
 
         if (mapType === "circles-by-value") {
-          return "#f3f4f6";
+          return circleBaseFill;
         }
 
-        return value != null ? colorScale(value) : "#eee";
+        return value != null ? colorScale(value) : noDataFill;
       })
-      .attr("stroke", "#333")
+      .attr("stroke", pathStroke)
       .on("mouseover", (event, d) => {
         const name = getFeatureName(d);
         const value = valueByCity[normalize(name)];
@@ -541,13 +584,13 @@ export default function Map({
         .attr("dominant-baseline", "middle")
         .attr("font-size", mapName === "turkey" ? 6 : mapName === "europe" ? 6 : 8)
         .attr("font-weight", 600)
-        .attr("fill", "#111827")
+        .attr("fill", textFill)
         .attr("paint-order", "stroke")
-        .attr("stroke", "#ffffff")
+        .attr("stroke", labelStroke)
         .attr("stroke-width", 3)
         .attr("stroke-linejoin", "round")
         .style("font-family", "Arial, sans-serif")
-        .style("filter", "drop-shadow(0 1px 1px rgba(255,255,255,0.65))")
+        .style("filter", labelShadow)
         .style("display", d => {
           const [x, y] = getLabelPoint(d);
           return Number.isFinite(x) && Number.isFinite(y) ? null : "none";
@@ -681,7 +724,7 @@ export default function Map({
               .attr("y1", label.labelY)
               .attr("x2", label.anchorX)
               .attr("y2", label.anchorY)
-              .attr("stroke", "#4b5563")
+              .attr("stroke", leaderStroke)
               .attr("stroke-width", 0.8)
               .attr("stroke-opacity", 0.75)
               .attr("marker-end", "url(#label-line-arrow)");
@@ -755,7 +798,7 @@ else {
         .attr("y", legendY - 8)
         .attr("font-size", 12)
         .attr("font-weight", 700)
-        .attr("fill", "#111827")
+        .attr("fill", textFill)
         .style("font-family", "Arial, sans-serif");
 
       wrapSvgText({
@@ -781,9 +824,11 @@ else {
         .attr("height", legendHeight)
         .style("fill", "url(#legend-gradient)");
 
-      svg.append("g")
+      const axisG = svg.append("g")
         .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
         .call(d3.axisBottom(legendScale).ticks(5));
+      axisG.selectAll("text").attr("fill", textFill);
+      axisG.selectAll("line, path").attr("stroke", darkBackground ? "rgba(241,245,249,0.4)" : null);
     }
 
     if (mapType === "two-color-status") {
@@ -791,7 +836,7 @@ else {
         .attr("transform", `translate(${legendX}, ${legendY})`)
         .style("font-family", "Arial, sans-serif")
         .attr("font-size", 12)
-        .attr("fill", "#111827");
+        .attr("fill", textFill);
 
       [
         { label: "Present", color: "#2563eb" },
@@ -817,7 +862,7 @@ else {
         .attr("transform", `translate(${legendX}, ${legendY})`)
         .style("font-family", "Arial, sans-serif")
         .attr("font-size", 12)
-        .attr("fill", "#111827");
+        .attr("fill", textFill);
 
       const legendValues = [Math.round(maxValue / 2), maxValue]
         .filter((value, index, values) => value > 0 && values.indexOf(value) === index);
@@ -842,7 +887,7 @@ else {
       });
     }
 
-  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType]);
+  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground]);
 
   return <svg ref={ref}></svg>;
 }

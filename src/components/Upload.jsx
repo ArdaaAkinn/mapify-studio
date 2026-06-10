@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 export default function Upload({ onData }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -21,11 +22,13 @@ export default function Upload({ onData }) {
     };
 
     reader.readAsArrayBuffer(file);
+    e.target.value = "";
   };
 
   return (
-    <div>
-      <input type="file" onChange={handleFile} />
-    </div>
+    <label className="upload-label">
+      ↑ Import spreadsheet
+      <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} hidden />
+    </label>
   );
 }
