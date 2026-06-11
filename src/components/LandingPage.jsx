@@ -3,7 +3,7 @@ import { useEffect } from "react";
 const FEATURES = [
   {
     icon: "🗺️",
-    title: "11 maps & growing",
+    title: "15 maps & growing",
     desc: "Turkey (provinces & districts), Europe (country + NUTS-1/2/3), USA (states & counties), Canada, Germany, France, Italy, Spain, Greece, Russia, and UK."
   },
   {
@@ -42,7 +42,7 @@ const STEPS = [
 ];
 
 const STATS = [
-  { value: "11+",    label: "Maps available"        },
+  { value: "15+",    label: "Maps available"        },
   { value: "3",      label: "Visualization types"   },
   { value: "100%",   label: "Free to use"            },
   { value: "0",      label: "Sign-up required"       }

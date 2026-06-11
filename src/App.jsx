@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Map from "./components/Map";
 import Upload from "./components/Upload";
 import LandingPage from "./components/LandingPage";
@@ -16,23 +16,25 @@ import spainRaw from "./data/spain.geojson?raw";
 import greeceRaw from "./data/greece.geojson?raw";
 import russiaRaw from "./data/russia.geojson?raw";
 import ukRaw from "./data/uk.geojson?raw";
-import turkeyDistrictsRaw from "./data/turkey-d.geojson?raw";
-import europeN1Raw from "./data/europe-n1.geojson?raw";
-import europeN2Raw from "./data/europe-n2.geojson?raw";
-import europeN3Raw from "./data/europe-n3.geojson?raw";
-import usaCountiesRaw from "./data/usa-c.geojson?raw";
-
+import india from "./data/india.json";
+import china from "./data/china.json";
+import indonesia from "./data/indonesia.json";
+import brazil from "./data/brazil.json";
 const france = JSON.parse(franceRaw);
-const italy = JSON.parse(italyRaw);
-const spain = JSON.parse(spainRaw);
+const italy  = JSON.parse(italyRaw);
+const spain  = JSON.parse(spainRaw);
 const greece = JSON.parse(greeceRaw);
 const russia = JSON.parse(russiaRaw);
-const uk = JSON.parse(ukRaw);
-const turkeyDistricts = JSON.parse(turkeyDistrictsRaw);
-const europeN1 = JSON.parse(europeN1Raw);
-const europeN2 = JSON.parse(europeN2Raw);
-const europeN3 = JSON.parse(europeN3Raw);
-const usaCounties = JSON.parse(usaCountiesRaw);
+const uk     = JSON.parse(ukRaw);
+
+// Drill-down maps loaded on first use and cached — keeps startup fast
+const DRILLDOWN_LOADERS = {
+  "turkey-d":  () => import("./data/turkey-d.geojson?raw").then(m => JSON.parse(m.default)),
+  "usa-c":     () => import("./data/usa-c.geojson?raw").then(m => JSON.parse(m.default)),
+  "europe-n1": () => import("./data/europe-n1.geojson?raw").then(m => JSON.parse(m.default)),
+  "europe-n2": () => import("./data/europe-n2.geojson?raw").then(m => JSON.parse(m.default)),
+  "europe-n3": () => import("./data/europe-n3.geojson?raw").then(m => JSON.parse(m.default)),
+};
 
 const mapCatalog = [
   {
@@ -133,6 +135,42 @@ const mapCatalog = [
     globeColor: "#6366f1",
     labelCoordinates: [-2, 54],
     globeRadius: 5
+  },
+  {
+    id: "india",
+    label: "India",
+    shortLabel: "India",
+    geoData: india,
+    globeColor: "#f59e0b",
+    labelCoordinates: [78.9, 22.5],
+    globeRadius: 9
+  },
+  {
+    id: "china",
+    label: "China",
+    shortLabel: "China",
+    geoData: china,
+    globeColor: "#dc2626",
+    labelCoordinates: [104, 35],
+    globeRadius: 15
+  },
+  {
+    id: "indonesia",
+    label: "Indonesia",
+    shortLabel: "Indonesia",
+    geoData: indonesia,
+    globeColor: "#0d9488",
+    labelCoordinates: [118, -2],
+    globeRadius: 10
+  },
+  {
+    id: "brazil",
+    label: "Brazil",
+    shortLabel: "Brazil",
+    geoData: brazil,
+    globeColor: "#4ade80",
+    labelCoordinates: [-52, -14],
+    globeRadius: 14
   }
 ];
 
@@ -159,6 +197,9 @@ const createMapRows = (selectedMap) => {
 
   return selectedMap.features.map(feature => {
     const name =
+      feature.properties.NAME_1 ||
+      feature.properties.Estado ||
+      feature.properties.Propinsi ||
       feature.properties.name ||
       feature.properties.Name ||
       feature.properties.nom ||
@@ -205,6 +246,15 @@ function App() {
   const [turkeyView, setTurkeyView] = useState("provinces");
   const [europeView, setEuropeView] = useState("countries");
   const [usaView, setUsaView] = useState("states");
+  const [activeGeoData, setActiveGeoData] = useState(initialMap.geoData);
+  const drilldownCacheRef = useRef({});
+
+  const loadDrilldown = useCallback(async (key) => {
+    if (!drilldownCacheRef.current[key]) {
+      drilldownCacheRef.current[key] = await DRILLDOWN_LOADERS[key]();
+    }
+    return drilldownCacheRef.current[key];
+  }, []);
 
   const openStudioMap = useCallback((mapId, shouldPush = true, withTransition = false) => {
     const mapConfig = mapCatalog.find(map => map.id === mapId) || mapCatalog[0];
@@ -212,6 +262,7 @@ function App() {
     setTurkeyView("provinces");
     setEuropeView("countries");
     setUsaView("states");
+    setActiveGeoData(mapConfig.geoData);
 
     const showStudio = () => {
       setSelectedMapConfig(mapConfig);
@@ -264,37 +315,33 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [openStudioMap]);
 
-  const nutsGeoMap = { nuts1: europeN1, nuts2: europeN2, nuts3: europeN3 };
-
-  const activeGeoData =
-    selectedMapConfig.id === "turkey" && turkeyView === "districts" ? turkeyDistricts :
-    selectedMapConfig.id === "europe" && europeView !== "countries" ? nutsGeoMap[europeView] :
-    selectedMapConfig.id === "usa" && usaView === "counties" ? usaCounties :
-    selectedMapConfig.geoData;
-
-  const switchTurkeyView = (view) => {
+  const switchTurkeyView = useCallback(async (view) => {
     setTurkeyView(view);
-    const geo = view === "districts" ? turkeyDistricts : turkey;
+    const geo = view === "districts" ? await loadDrilldown("turkey-d") : turkey;
     const rows = createMapRows(geo);
+    setActiveGeoData(geo);
     setData(rows);
     setMapData(rows);
-  };
+  }, [loadDrilldown]);
 
-  const switchEuropeView = (view) => {
+  const switchEuropeView = useCallback(async (view) => {
     setEuropeView(view);
-    const geo = nutsGeoMap[view] ?? europe;
+    const keyMap = { nuts1: "europe-n1", nuts2: "europe-n2", nuts3: "europe-n3" };
+    const geo = view !== "countries" ? await loadDrilldown(keyMap[view]) : europe;
     const rows = createMapRows(geo);
+    setActiveGeoData(geo);
     setData(rows);
     setMapData(rows);
-  };
+  }, [loadDrilldown]);
 
-  const switchUsaView = (view) => {
+  const switchUsaView = useCallback(async (view) => {
     setUsaView(view);
-    const geo = view === "counties" ? usaCounties : usa;
+    const geo = view === "counties" ? await loadDrilldown("usa-c") : usa;
     const rows = createMapRows(geo);
+    setActiveGeoData(geo);
     setData(rows);
     setMapData(rows);
-  };
+  }, [loadDrilldown]);
 
   const downloadImage = () => {
     const svg = document.querySelector(".map-container svg");

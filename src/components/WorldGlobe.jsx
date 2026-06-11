@@ -192,9 +192,16 @@ export default function WorldGlobe({ maps, onSelectMap, onSelectGroup, activeMap
 
     const startTime = performance.now();
     let animationFrame;
+    let visible = true;
+    const visibilityObs = new IntersectionObserver(
+      ([entry]) => { visible = entry.isIntersecting; },
+      { threshold: 0 }
+    );
+    visibilityObs.observe(canvas);
 
     const render = (now) => {
       animationFrame = requestAnimationFrame(render);
+      if (!visible) return;
 
       const elapsed = now - startTime;
       const anim = animRef.current;
@@ -389,7 +396,10 @@ export default function WorldGlobe({ maps, onSelectMap, onSelectGroup, activeMap
     };
 
     animationFrame = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animationFrame);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      visibilityObs.disconnect();
+    };
   }, [globeRegions]);
 
   // Event handlers

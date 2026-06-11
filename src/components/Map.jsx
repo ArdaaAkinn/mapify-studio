@@ -60,7 +60,45 @@ const visualLabelAliases = {
     "València/Valencia": "Valencia",
     "Alacant/Alicante": "Alicante",
     "Castelló/Castellón": "Castellón",
-  }
+  },
+  india: {
+    "Andaman and Nicobar": "A&N",
+    "Jammu and Kashmir": "J&K",
+    "Himachal Pradesh": "H.P.",
+    "Haryana": "Hary.",
+    "Punjab": "Punj.",
+    "Arunachal Pradesh": "Arunachal P.",
+    "Meghalaya": "Megh.",
+    "Uttaranchal": "Uttar.",
+    "Nagaland": "Nag.",
+    "Jharkhand": "Jharkh.",
+    "Tripura": "Tr.",
+    "West Bengal": "W. Bengal",
+    "Mizoram": "Miz.",
+    "Kerala": "Ker.",
+    "Chhattisgarh": "Chhatt.",
+  },
+  indonesia: {
+    "BANGKA BELITUNG": "BANGKA B.",
+    "KALIMANTAN SELATAN": "KALIM. S.",
+    "SUMATERA SELATAN": "SUMATERA S.",
+    "DKI JAKARTA": "JAKARTA",
+    "JAWA BARAT": "J.BARAT",
+    "JAWA TENGAH": "J.TENGAH",
+    "JAWA TIMUR": "J.TIMUR",
+    "DAERAH ISTIMEWA YOGYAKARTA": "YOGYAK.",
+    "NUSATENGGARA BARAT": "NUSA B.",
+    "SULAWESI UTARA": "S.UTARA.",
+    "IRIAN JAYA TENGAH": "I.J.TENGAH",
+    "SULAWESI TENGGARA": "S.TENG.",
+    "IRIAN JAYA TIMUR": "I.J.TIMUR",
+    "IRIAN JAYA BARAT": "I.J.BARAT",
+    "NUSA TENGGARA TIMUR": "NUSA T. TIMUR",
+  },
+  brazil: {
+    "Rio Grande do Norte": "R.Grande N.",
+    "Espírito Santo": "Espírito S.",
+  },
 };
 
 const hiddenVisualLabels = {
@@ -69,7 +107,9 @@ const hiddenVisualLabels = {
     "Holy See", "San Marino", "Andorra", "Monaco", "Liechtenstein", "Kosovo", "North Macedonia", "Vatican", "Montenegro", "Åland", "Malta", "Cyprus", "Faroe Is."
   ],
   turkey: [],
-  usa: []
+  usa: [],
+  india: ["Chandigarh", "Delhi", "Puducherry", "Dādra and Nagar Haveli and Damān and Diu"],
+  brazil: ["Distrito Federal"],
 };
 
 const visualLabelCoordinates = {
@@ -321,6 +361,9 @@ export default function Map({
     });
 
     const getFeatureName = (feature) =>
+      feature.properties.NAME_1 ||
+      feature.properties.Estado ||
+      feature.properties.Propinsi ||
       feature.properties.name ||
       feature.properties.Name ||
       feature.properties.nom ||
@@ -814,6 +857,16 @@ if (mapName === "turkey") {
 }else if (mapName === "france") {
 
   legendX = width - 340;
+  legendY = height - 60;
+
+}else if (mapName === "india") {
+
+  legendX = width - 160;
+  legendY = height - 60;
+
+}else if (mapName === "china") {
+
+  legendX = width - 740;
   legendY = height - 60;
 }
 else {
