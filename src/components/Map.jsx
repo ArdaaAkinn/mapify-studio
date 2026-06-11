@@ -17,6 +17,7 @@ const visualLabelAliases = {
       "Sakarya": "Sak.",
       "Gaziantep": "Antep",
       "Gumushane": "Gümüş.",
+      "Kahramanmaraş": "K. Maraş.",
   },
   usa: {
     "New York": "NY",
@@ -132,13 +133,24 @@ export default function Map({
   mapTitle = "",
   legendTitle = "",
   mapType = "colored-regions",
-  darkBackground = false
+  darkBackground = false,
+  gradientMin = null,
+  gradientMax = null,
+  hideNoData = false
 }) {
   const ref = useRef();
   const tooltipRef = useRef();
 
-  const normalize = (s) =>
-    s?.toString().trim()
+  const ALIASES = {
+    turkiye: "turkey",
+    "bosnia and herzegovina": "bosnia and herz.",
+    "bosnia & herzegovina": "bosnia and herz.",
+    bosnia: "bosnia and herz.",
+    bih: "bosnia and herz.",
+  };
+
+  const normalize = (s) => {
+    const n = s?.toString().trim()
       .replace(/İ/g, "i")
       .toLowerCase()
       .replace(/ı/g, "i")
@@ -147,6 +159,8 @@ export default function Map({
       .replace(/ü/g, "u")
       .replace(/ö/g, "o")
       .replace(/ç/g, "c");
+    return ALIASES[n] ?? n;
+  };
 
   useEffect(() => {
     if (!tooltipRef.current) {
@@ -308,9 +322,11 @@ export default function Map({
 
     const getFeatureName = (feature) =>
       feature.properties.name ||
+      feature.properties.Name ||
       feature.properties.nom ||
       feature.properties.reg_name ||
       feature.properties.NAME ||
+      feature.properties.NUTS_NAME ||
       feature.properties.admin ||
       feature.properties.STATE_NAME ||
       feature.properties.region ||
@@ -340,8 +356,13 @@ export default function Map({
       Viridis: d3.interpolateViridis
     };
 
+    const autoMin = 0;
+    const autoMax = d3.max(data, d => +d.value) || 0;
+    const domainMin = gradientMin != null && gradientMin !== "" ? +gradientMin : autoMin;
+    const domainMax = gradientMax != null && gradientMax !== "" ? +gradientMax : autoMax;
+
     const colorScale = d3.scaleSequential()
-      .domain([0, d3.max(data, d => +d.value) || 0])
+      .domain([domainMin, domainMax])
       .interpolator(interpolators[theme] || d3.interpolateBlues);
 
     const numericValues = data
@@ -514,6 +535,11 @@ export default function Map({
 
         return value != null ? colorScale(value) : noDataFill;
       })
+      .style("display", d => {
+        if (!hideNoData) return null;
+        const name = normalize(getFeatureName(d));
+        return displayValueByCity[name] != null ? null : "none";
+      })
       .attr("stroke", pathStroke)
       .on("mouseover", (event, d) => {
         const name = getFeatureName(d);
@@ -607,6 +633,11 @@ export default function Map({
         const labelKey = normalize(name);
 
         if (!shouldShowVisualLabel(name) || drawnVisualLabels.has(labelKey)) {
+          text.style("display", "none");
+          return;
+        }
+
+        if (hideNoData && displayValueByCity[labelKey] == null) {
           text.style("display", "none");
           return;
         }
@@ -763,8 +794,8 @@ if (mapName === "turkey") {
 
 } else if (mapName === "canada") {
 
-  legendX = width - 260;
-  legendY = height - 350;
+  legendX = width - 560;
+  legendY = height - 50;
 
 } else if (mapName === "greece") {
 
@@ -824,9 +855,17 @@ else {
         .attr("height", legendHeight)
         .style("fill", "url(#legend-gradient)");
 
+      const [dMin, dMax] = colorScale.domain();
+      const range = dMax - dMin;
+      const maxLabelLen = d3.format("~s")(dMax).length;
+      const tickCount = maxLabelLen >= 6 ? 3 : maxLabelLen >= 4 ? 4 : 5;
+      const tickFmt = range >= 10000 || dMax >= 10000
+        ? d3.format("~s")
+        : d3.format("~g");
+
       const axisG = svg.append("g")
         .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
-        .call(d3.axisBottom(legendScale).ticks(5));
+        .call(d3.axisBottom(legendScale).ticks(tickCount).tickFormat(tickFmt));
       axisG.selectAll("text").attr("fill", textFill);
       axisG.selectAll("line, path").attr("stroke", darkBackground ? "rgba(241,245,249,0.4)" : null);
     }
@@ -887,7 +926,7 @@ else {
       });
     }
 
-  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground]);
+  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground, gradientMin, gradientMax, hideNoData]);
 
   return <svg ref={ref}></svg>;
 }

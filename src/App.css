@@ -393,11 +393,19 @@ body {
 
 .map-card { padding: 20px 24px 24px; }
 
+.map-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  gap: 12px;
+}
+
 .map-card-title {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-1);
-  margin: 0 0 16px;
+  margin: 0;
   letter-spacing: -0.015em;
   display: flex;
   align-items: center;
@@ -412,6 +420,37 @@ body {
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
   border-radius: 2px;
   flex-shrink: 0;
+}
+
+.map-view-tabs {
+  display: flex;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.map-view-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.map-view-tab:hover { color: var(--text-1); }
+
+.map-view-tab.active {
+  background: rgba(129,140,248,0.18);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .map-container {
@@ -738,6 +777,16 @@ body {
   font-weight: 400;
 }
 
+.gradient-range-row {
+  display: flex;
+  gap: 8px;
+}
+
+.text-field--half {
+  flex: 1;
+  min-width: 0;
+}
+
 .text-field input:focus,
 .text-field select:focus {
   outline: none;
@@ -828,6 +877,63 @@ body {
   border-color: rgba(16,185,129,0.4);
   border-style: solid;
   color: #34d399;
+}
+
+.panel-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.panel-section-title-row .panel-section-title {
+  margin-bottom: 0;
+}
+
+.upload-info {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 12px;
+  cursor: default;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.upload-info:hover {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.4);
+  color: #a5b4fc;
+}
+
+.upload-info-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  width: 210px;
+  padding: 8px 10px;
+  background: #1e2535;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.upload-info:hover .upload-info-tooltip {
+  display: block;
 }
 
 .download-btn {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Map from "./components/Map";
 import Upload from "./components/Upload";
+import LandingPage from "./components/LandingPage";
 import "./App.css";
 import DataTable from "./components/DataTable";
 import WorldGlobe from "./components/WorldGlobe";
@@ -15,6 +16,11 @@ import spainRaw from "./data/spain.geojson?raw";
 import greeceRaw from "./data/greece.geojson?raw";
 import russiaRaw from "./data/russia.geojson?raw";
 import ukRaw from "./data/uk.geojson?raw";
+import turkeyDistrictsRaw from "./data/turkey-d.geojson?raw";
+import europeN1Raw from "./data/europe-n1.geojson?raw";
+import europeN2Raw from "./data/europe-n2.geojson?raw";
+import europeN3Raw from "./data/europe-n3.geojson?raw";
+import usaCountiesRaw from "./data/usa-c.geojson?raw";
 
 const france = JSON.parse(franceRaw);
 const italy = JSON.parse(italyRaw);
@@ -22,6 +28,11 @@ const spain = JSON.parse(spainRaw);
 const greece = JSON.parse(greeceRaw);
 const russia = JSON.parse(russiaRaw);
 const uk = JSON.parse(ukRaw);
+const turkeyDistricts = JSON.parse(turkeyDistrictsRaw);
+const europeN1 = JSON.parse(europeN1Raw);
+const europeN2 = JSON.parse(europeN2Raw);
+const europeN3 = JSON.parse(europeN3Raw);
+const usaCounties = JSON.parse(usaCountiesRaw);
 
 const mapCatalog = [
   {
@@ -149,9 +160,11 @@ const createMapRows = (selectedMap) => {
   return selectedMap.features.map(feature => {
     const name =
       feature.properties.name ||
+      feature.properties.Name ||
       feature.properties.nom ||
       feature.properties.reg_name ||
       feature.properties.NAME ||
+      feature.properties.NUTS_NAME ||
       feature.properties.admin ||
       feature.properties.STATE_NAME ||
       feature.properties.region ||
@@ -186,10 +199,19 @@ function App() {
   const [mapType, setMapType] = useState("colored-regions");
   const [theme, setTheme] = useState("Blues");
   const [darkBackground, setDarkBackground] = useState(false);
+  const [gradientMin, setGradientMin] = useState("");
+  const [gradientMax, setGradientMax] = useState("");
+  const [hideNoData, setHideNoData] = useState(false);
+  const [turkeyView, setTurkeyView] = useState("provinces");
+  const [europeView, setEuropeView] = useState("countries");
+  const [usaView, setUsaView] = useState("states");
 
   const openStudioMap = useCallback((mapId, shouldPush = true, withTransition = false) => {
     const mapConfig = mapCatalog.find(map => map.id === mapId) || mapCatalog[0];
     const rows = createMapRows(mapConfig.geoData);
+    setTurkeyView("provinces");
+    setEuropeView("countries");
+    setUsaView("states");
 
     const showStudio = () => {
       setSelectedMapConfig(mapConfig);
@@ -242,6 +264,38 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [openStudioMap]);
 
+  const nutsGeoMap = { nuts1: europeN1, nuts2: europeN2, nuts3: europeN3 };
+
+  const activeGeoData =
+    selectedMapConfig.id === "turkey" && turkeyView === "districts" ? turkeyDistricts :
+    selectedMapConfig.id === "europe" && europeView !== "countries" ? nutsGeoMap[europeView] :
+    selectedMapConfig.id === "usa" && usaView === "counties" ? usaCounties :
+    selectedMapConfig.geoData;
+
+  const switchTurkeyView = (view) => {
+    setTurkeyView(view);
+    const geo = view === "districts" ? turkeyDistricts : turkey;
+    const rows = createMapRows(geo);
+    setData(rows);
+    setMapData(rows);
+  };
+
+  const switchEuropeView = (view) => {
+    setEuropeView(view);
+    const geo = nutsGeoMap[view] ?? europe;
+    const rows = createMapRows(geo);
+    setData(rows);
+    setMapData(rows);
+  };
+
+  const switchUsaView = (view) => {
+    setUsaView(view);
+    const geo = view === "counties" ? usaCounties : usa;
+    const rows = createMapRows(geo);
+    setData(rows);
+    setMapData(rows);
+  };
+
   const downloadImage = () => {
     const svg = document.querySelector(".map-container svg");
     if (!svg) return;
@@ -283,53 +337,72 @@ function App() {
   if (screen === "globe" || screen === "loading") {
     return (
       <main className={`globe-page ${screen === "loading" ? "is-loading" : ""}`}>
-        <section className="globe-panel">
-          <div className="globe-copy">
-            <p className="globe-kicker">Mapify Studio</p>
-            <h1>{screen === "loading" ? `Opening ${loadingMapConfig?.label}` : globeGroup === "europe" ? "Choose a European map" : "Choose a map from the world"}</h1>
-            <p>
-              {screen === "loading"
-                ? "Preparing the editor with the map, data table, and customization controls."
-                : globeGroup === "europe"
-                ? "Click a country on the globe or pick from the list below."
-                : "Click an available region on the rotating earth to open its map editor."}
-            </p>
-            {globeGroup === "europe" && screen !== "loading" && (
-              <button className="back-to-world-btn" onClick={() => setGlobeGroup(null)}>
-                ← All regions
-              </button>
-            )}
-          </div>
+        <div className="globe-hero">
+          <section className="globe-panel">
+            <div className="globe-copy">
+              <p className="globe-kicker">Mapify Studio</p>
+              <h1>{screen === "loading" ? `Opening ${loadingMapConfig?.label}` : globeGroup === "europe" ? "Choose a European map" : "Choose a map from the world"}</h1>
+              <p>
+                {screen === "loading"
+                  ? "Preparing the editor with the map, data table, and customization controls."
+                  : globeGroup === "europe"
+                  ? "Click a country on the globe or pick from the list below."
+                  : "Click an available region on the rotating earth to open its map editor."}
+              </p>
+              {globeGroup === "europe" && screen !== "loading" && (
+                <button className="back-to-world-btn" onClick={() => setGlobeGroup(null)}>
+                  ← All regions
+                </button>
+              )}
+            </div>
 
-          <WorldGlobe
-            maps={mapCatalog}
-            onSelectMap={(mapId) => openStudioMap(mapId, true, true)}
-            onSelectGroup={(group) => setGlobeGroup(group)}
-            activeMapId={loadingMapConfig?.id}
-            globeGroup={globeGroup}
-          />
+            <WorldGlobe
+              maps={mapCatalog}
+              onSelectMap={(mapId) => openStudioMap(mapId, true, true)}
+              onSelectGroup={(group) => setGlobeGroup(group)}
+              activeMapId={loadingMapConfig?.id}
+              globeGroup={globeGroup}
+            />
 
-          <div className="globe-map-list" aria-label="Available maps">
-            {(globeGroup === "europe"
-              ? mapCatalog.filter(m => ["europe", "germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
-              : mapCatalog.filter(m => !["germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
-            ).map(map => (
-              <button
-                key={map.id}
-                onClick={() => (!globeGroup && map.id === "europe") ? setGlobeGroup("europe") : openStudioMap(map.id, true, true)}
-                disabled={screen === "loading"}
-              >
-                {map.label}
-              </button>
-            ))}
-          </div>
-        </section>
+            <div className="globe-map-list" aria-label="Available maps">
+              {(globeGroup === "europe"
+                ? mapCatalog.filter(m => ["europe", "germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
+                : mapCatalog.filter(m => !["germany", "france", "italy", "spain", "greece", "turkey", "russia", "uk"].includes(m.id))
+              ).map(map => (
+                <button
+                  key={map.id}
+                  onClick={() => (!globeGroup && map.id === "europe") ? setGlobeGroup("europe") : openStudioMap(map.id, true, true)}
+                  disabled={screen === "loading"}
+                >
+                  {map.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {screen === "globe" && (
+            <button
+              className="scroll-hint"
+              aria-label="Scroll down"
+              onClick={() => document.querySelector(".landing-page")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              <span>Learn more</span>
+              <span className="scroll-chevron">↓</span>
+            </button>
+          )}
+        </div>
 
         {screen === "loading" && (
           <div className="loading-overlay" aria-live="polite">
             <div className="loading-spinner"></div>
             <span>Loading map studio</span>
           </div>
+        )}
+
+        {screen === "globe" && (
+          <LandingPage
+            onGetStarted={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          />
         )}
       </main>
     );
@@ -359,12 +432,58 @@ function App() {
       {/* Editor area — map + data table */}
       <div className="editor-area">
         <div className="map-card">
-          <h2 className="map-card-title">{selectedMapConfig.label}</h2>
+          <div className="map-card-header">
+            <h2 className="map-card-title">{selectedMapConfig.label}</h2>
+            {selectedMapConfig.id === "turkey" && (
+              <div className="map-view-tabs">
+                <button
+                  className={`map-view-tab${turkeyView === "provinces" ? " active" : ""}`}
+                  onClick={() => switchTurkeyView("provinces")}
+                >Provinces</button>
+                <button
+                  className={`map-view-tab${turkeyView === "districts" ? " active" : ""}`}
+                  onClick={() => switchTurkeyView("districts")}
+                >Districts</button>
+              </div>
+            )}
+            {selectedMapConfig.id === "usa" && (
+              <div className="map-view-tabs">
+                <button
+                  className={`map-view-tab${usaView === "states" ? " active" : ""}`}
+                  onClick={() => switchUsaView("states")}
+                >States</button>
+                <button
+                  className={`map-view-tab${usaView === "counties" ? " active" : ""}`}
+                  onClick={() => switchUsaView("counties")}
+                >Counties</button>
+              </div>
+            )}
+            {selectedMapConfig.id === "europe" && (
+              <div className="map-view-tabs">
+                <button
+                  className={`map-view-tab${europeView === "countries" ? " active" : ""}`}
+                  onClick={() => switchEuropeView("countries")}
+                >Countries</button>
+                <button
+                  className={`map-view-tab${europeView === "nuts1" ? " active" : ""}`}
+                  onClick={() => switchEuropeView("nuts1")}
+                >NUTS-1</button>
+                <button
+                  className={`map-view-tab${europeView === "nuts2" ? " active" : ""}`}
+                  onClick={() => switchEuropeView("nuts2")}
+                >NUTS-2</button>
+                <button
+                  className={`map-view-tab${europeView === "nuts3" ? " active" : ""}`}
+                  onClick={() => switchEuropeView("nuts3")}
+                >NUTS-3</button>
+              </div>
+            )}
+          </div>
           <div className={`map-container${darkBackground ? " dark-bg" : ""}`}>
             <Map
               data={mapData}
               theme={theme}
-              geoData={selectedMapConfig.geoData}
+              geoData={activeGeoData}
               mapName={selectedMapConfig.id}
               showPlaceNames={showPlaceNames}
               showPlaceValues={showPlaceValues}
@@ -372,6 +491,9 @@ function App() {
               legendTitle={legendTitle}
               mapType={mapType}
               darkBackground={darkBackground}
+              gradientMin={gradientMin}
+              gradientMax={gradientMax}
+              hideNoData={hideNoData}
             />
           </div>
         </div>
@@ -419,6 +541,15 @@ function App() {
             />
             <span className="switch" aria-hidden="true"></span>
           </label>
+          <label className="switch-row">
+            <span>Hide regions with no data</span>
+            <input
+              type="checkbox"
+              checked={hideNoData}
+              onChange={(e) => setHideNoData(e.target.checked)}
+            />
+            <span className="switch" aria-hidden="true"></span>
+          </label>
           <label className="text-field">
             <span>Color theme</span>
             <select value={theme} onChange={(e) => setTheme(e.target.value)}>
@@ -428,6 +559,28 @@ function App() {
               <option value="Viridis">Viridis</option>
             </select>
           </label>
+          {mapType === "colored-regions" && (
+            <div className="gradient-range-row">
+              <label className="text-field text-field--half">
+                <span>Gradient min</span>
+                <input
+                  type="number"
+                  value={gradientMin}
+                  onChange={(e) => setGradientMin(e.target.value)}
+                  placeholder="Auto"
+                />
+              </label>
+              <label className="text-field text-field--half">
+                <span>Gradient max</span>
+                <input
+                  type="number"
+                  value={gradientMax}
+                  onChange={(e) => setGradientMax(e.target.value)}
+                  placeholder="Auto"
+                />
+              </label>
+            </div>
+          )}
           <label className="text-field">
             <span>Map title</span>
             <input
@@ -471,8 +624,41 @@ function App() {
         </div>
 
         <div className="panel-section">
-          <h3 className="panel-section-title">Data &amp; Export</h3>
-          <Upload onData={setData} />
+          <div className="panel-section-title-row">
+            <h3 className="panel-section-title">Data &amp; Export</h3>
+            <span className="upload-info">
+              ℹ
+              <span className="upload-info-tooltip">
+                Deleting unuseful texts/headings would help the importation of the data.
+              </span>
+            </span>
+          </div>
+          <Upload onData={(imported) => {
+            const NAME_ALIASES = {
+              turkiye: "turkey",
+              "bosnia and herzegovina": "bosnia and herz.",
+              "bosnia & herzegovina": "bosnia and herz.",
+              bosnia: "bosnia and herz.",
+              bih: "bosnia and herz.",
+            };
+            const normalizeKey = (s) => {
+              const n = s?.toString().trim()
+                .replace(/İ/g, "i").toLowerCase()
+                .replace(/ı/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g")
+                .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c");
+              return NAME_ALIASES[n] ?? n;
+            };
+
+            const importMap = {};
+            imported.forEach(row => {
+              if (row.city) importMap[normalizeKey(row.city)] = row.value;
+            });
+
+            setData(prev => prev.map(row => {
+              const key = normalizeKey(row.city);
+              return key in importMap ? { ...row, value: importMap[key] } : row;
+            }));
+          }} />
           <button className="download-btn" onClick={downloadImage}>↓ Download PNG</button>
         </div>
 
