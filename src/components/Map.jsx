@@ -163,6 +163,27 @@ const labelsKeptOnMap = {
   ]
 };
 
+const ALIASES = {
+  turkiye: "turkey",
+  "bosnia and herzegovina": "bosnia and herz.",
+  "bosnia & herzegovina": "bosnia and herz.",
+  bosnia: "bosnia and herz.",
+  bih: "bosnia and herz.",
+};
+
+const normalize = (s) => {
+  const n = s?.toString().trim()
+    .replace(/İ/g, "i")
+    .toLowerCase()
+    .replace(/ı/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+  return ALIASES[n] ?? n;
+};
+
 export default function Map({
   data = [],
   theme,
@@ -176,31 +197,13 @@ export default function Map({
   darkBackground = false,
   gradientMin = null,
   gradientMax = null,
-  hideNoData = false
+  hideNoData = false,
+  customFillByRegion = {},
+  customColorLabels = {},
+  onRegionClick = () => {}
 }) {
   const ref = useRef();
   const tooltipRef = useRef();
-
-  const ALIASES = {
-    turkiye: "turkey",
-    "bosnia and herzegovina": "bosnia and herz.",
-    "bosnia & herzegovina": "bosnia and herz.",
-    bosnia: "bosnia and herz.",
-    bih: "bosnia and herz.",
-  };
-
-  const normalize = (s) => {
-    const n = s?.toString().trim()
-      .replace(/İ/g, "i")
-      .toLowerCase()
-      .replace(/ı/g, "i")
-      .replace(/ş/g, "s")
-      .replace(/ğ/g, "g")
-      .replace(/ü/g, "u")
-      .replace(/ö/g, "o")
-      .replace(/ç/g, "c");
-    return ALIASES[n] ?? n;
-  };
 
   useEffect(() => {
     if (!tooltipRef.current) {
@@ -576,6 +579,10 @@ export default function Map({
           return circleBaseFill;
         }
 
+        if (mapType === "custom-color-fill") {
+          return customFillByRegion[normalize(rawName)] || noDataFill;
+        }
+
         return value != null ? colorScale(value) : noDataFill;
       })
       .style("display", d => {
@@ -584,6 +591,12 @@ export default function Map({
         return displayValueByCity[name] != null ? null : "none";
       })
       .attr("stroke", pathStroke)
+      .style("cursor", mapType === "custom-color-fill" ? "pointer" : "default")
+      .on("click", (event, d) => {
+        if (mapType === "custom-color-fill") {
+          onRegionClick(getFeatureName(d));
+        }
+      })
       .on("mouseover", (event, d) => {
         const name = getFeatureName(d);
         const value = valueByCity[normalize(name)];
@@ -949,6 +962,44 @@ else {
       });
     }
 
+    if (mapType === "custom-color-fill") {
+      const customLegend = svg.append("g")
+        .attr("transform", `translate(${legendX}, ${legendY})`)
+        .style("font-family", "Arial, sans-serif")
+        .attr("font-size", 12)
+        .attr("fill", textFill);
+
+      const usedColors = Array.from(new Set(Object.values(customFillByRegion)));
+
+      if (usedColors.length === 0) {
+        customLegend.append("text")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("font-size", 12)
+          .attr("font-weight", 600)
+          .text("Choose a palette color and click regions to paint them.");
+      } else {
+        usedColors.forEach((color, index) => {
+          const y = index * 18;
+          const count = Object.values(customFillByRegion).filter(value => value === color).length;
+          const label = customColorLabels[color]?.trim();
+
+          customLegend.append("rect")
+            .attr("x", 0)
+            .attr("y", y)
+            .attr("width", 14)
+            .attr("height", 14)
+            .attr("rx", 3)
+            .attr("fill", color);
+
+          customLegend.append("text")
+            .attr("x", 22)
+            .attr("y", y + 11)
+            .text(label ? `${label} (${count})` : `${count} region${count === 1 ? "" : "s"} • ${color}`);
+        });
+      }
+    }
+
     if (mapType === "circles-by-value") {
       const bubbleLegend = svg.append("g")
         .attr("transform", `translate(${legendX}, ${legendY})`)
@@ -979,7 +1030,7 @@ else {
       });
     }
 
-  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground, gradientMin, gradientMax, hideNoData]);
+  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground, gradientMin, gradientMax, hideNoData, customFillByRegion, customColorLabels, onRegionClick]);
 
   return <svg ref={ref}></svg>;
 }
