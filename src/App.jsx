@@ -1286,6 +1286,7 @@ function App() {
                 { list: unmatchedNames },
               );
             }}
+            onError={(message) => showToast("error", message)}
           />
 
           <div className="export-btn-row">

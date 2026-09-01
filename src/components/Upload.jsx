@@ -28,32 +28,47 @@ function detectColumns(keys) {
   return { cityKey, valueKey };
 }
 
-export default function Upload({ onData }) {
+export default function Upload({ onData, onError }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      try {
+        const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-      // defval:"" so missing cells don't vanish; raw:false keeps numbers as strings-or-numbers cleanly
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      if (json.length === 0) return;
+        // defval:"" so missing cells don't vanish; raw:false keeps numbers as strings-or-numbers cleanly
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (json.length === 0) {
+          onError?.("That spreadsheet doesn't have any rows.");
+          return;
+        }
 
-      const { cityKey, valueKey } = detectColumns(Object.keys(json[0]));
-      if (!cityKey) return;
+        const { cityKey, valueKey } = detectColumns(Object.keys(json[0]));
+        if (!cityKey) {
+          onError?.("Couldn't find a city/region column in that spreadsheet.");
+          return;
+        }
 
-      const mapped = json
-        .filter(row => String(row[cityKey] ?? "").trim() !== "")
-        .map(row => ({
-          city:  String(row[cityKey]).trim(),
-          value: valueKey != null ? row[valueKey] ?? "" : ""
-        }));
+        const mapped = json
+          .filter(row => String(row[cityKey] ?? "").trim() !== "")
+          .map(row => ({
+            city:  String(row[cityKey]).trim(),
+            value: valueKey != null ? row[valueKey] ?? "" : ""
+          }));
 
-      if (mapped.length > 0) onData(mapped);
+        if (mapped.length > 0) {
+          onData(mapped);
+        } else {
+          onError?.("No usable rows found in that spreadsheet.");
+        }
+      } catch {
+        onError?.("Couldn't read that file. Make sure it's a valid .xlsx, .xls, or .csv.");
+      }
     };
+    reader.onerror = () => onError?.("Couldn't read that file.");
 
     reader.readAsArrayBuffer(file);
     e.target.value = "";
