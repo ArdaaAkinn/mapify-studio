@@ -200,6 +200,7 @@ export default function Map({
   hideNoData = false,
   customFillByRegion = {},
   customColorLabels = {},
+  customColorLabelsEnabled = {},
   onRegionClick = () => {}
 }) {
   const ref = useRef();
@@ -970,6 +971,14 @@ else {
         .attr("fill", textFill);
 
       const usedColors = Array.from(new Set(Object.values(customFillByRegion)));
+      const labeledColors = usedColors
+        .map((color) => ({
+          color,
+          label: customColorLabelsEnabled[color]
+            ? customColorLabels[color]?.trim()
+            : "",
+        }))
+        .filter((entry) => entry.label);
 
       if (usedColors.length === 0) {
         customLegend.append("text")
@@ -979,10 +988,9 @@ else {
           .attr("font-weight", 600)
           .text("Choose a palette color and click regions to paint them.");
       } else {
-        usedColors.forEach((color, index) => {
+        labeledColors.forEach(({ color, label }, index) => {
           const y = index * 18;
           const count = Object.values(customFillByRegion).filter(value => value === color).length;
-          const label = customColorLabels[color]?.trim();
 
           customLegend.append("rect")
             .attr("x", 0)
@@ -995,7 +1003,7 @@ else {
           customLegend.append("text")
             .attr("x", 22)
             .attr("y", y + 11)
-            .text(label ? `${label} (${count})` : `${count} region${count === 1 ? "" : "s"} • ${color}`);
+            .text(`${label} (${count})`);
         });
       }
     }
@@ -1030,7 +1038,7 @@ else {
       });
     }
 
-  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground, gradientMin, gradientMax, hideNoData, customFillByRegion, customColorLabels, onRegionClick]);
+  }, [data, theme, geoData, mapName, showPlaceNames, showPlaceValues, mapTitle, legendTitle, mapType, darkBackground, gradientMin, gradientMax, hideNoData, customFillByRegion, customColorLabels, customColorLabelsEnabled, onRegionClick]);
 
   return <svg ref={ref}></svg>;
 }

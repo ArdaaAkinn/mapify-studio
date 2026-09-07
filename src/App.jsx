@@ -169,16 +169,18 @@ const mapCatalog = [
   },
 ];
 
-const paletteColors = [
-  "#2563eb",
-  "#dc2626",
-  "#16a34a",
-  "#f59e0b",
-  "#8b5cf6",
-  "#06b6d4",
-  "#ec4899",
-  "#475569",
+const paletteGroups = [
+  { base: "#2563eb", light: "#93c5fd", dark: "#1e3a8a" },
+  { base: "#dc2626", light: "#fca5a5", dark: "#7f1d1d" },
+  { base: "#16a34a", light: "#86efac", dark: "#14532d" },
+  { base: "#f59e0b", light: "#fcd34d", dark: "#78350f" },
+  { base: "#8b5cf6", light: "#c4b5fd", dark: "#4c1d95" },
+  { base: "#06b6d4", light: "#67e8f9", dark: "#164e63" },
+  { base: "#ec4899", light: "#f9a8d4", dark: "#831843" },
+  { base: "#475569", light: "#cbd5e1", dark: "#0f172a" },
 ];
+
+const paletteColors = paletteGroups.flatMap((g) => [g.light, g.base, g.dark]);
 
 const mapTypeOptions = [
   {
@@ -294,6 +296,7 @@ function App() {
   const [selectedPaletteColor, setSelectedPaletteColor] = useState("#2563eb");
   const [customFillByRegion, setCustomFillByRegion] = useState({});
   const [customColorLabels, setCustomColorLabels] = useState({});
+  const [customColorLabelsEnabled, setCustomColorLabelsEnabled] = useState({});
   const [turkeyView, setTurkeyView] = useState("provinces");
   const [europeView, setEuropeView] = useState("countries");
   const [usaView, setUsaView] = useState("states");
@@ -383,6 +386,7 @@ function App() {
         setMapData(rows);
         setCustomFillByRegion({});
         setCustomColorLabels({});
+        setCustomColorLabelsEnabled({});
         setLoadingMapConfig(null);
         setScreen("studio");
 
@@ -529,6 +533,7 @@ function App() {
       showPlaceValues,
       customFillByRegion,
       customColorLabels,
+      customColorLabelsEnabled,
     }),
     [
       selectedMapConfig,
@@ -548,6 +553,7 @@ function App() {
       showPlaceValues,
       customFillByRegion,
       customColorLabels,
+      customColorLabelsEnabled,
     ],
   );
 
@@ -605,6 +611,7 @@ function App() {
       setShowPlaceValues(!!project.showPlaceValues);
       setCustomFillByRegion(project.customFillByRegion ?? {});
       setCustomColorLabels(project.customColorLabels ?? {});
+      setCustomColorLabelsEnabled(project.customColorLabelsEnabled ?? {});
 
       const unmatchedNames = Object.keys(savedByKey)
         .filter((k) => !rowKeys.has(k))
@@ -656,6 +663,7 @@ function App() {
     showPlaceValues,
     customFillByRegion,
     customColorLabels,
+    customColorLabelsEnabled,
     turkeyView,
     europeView,
     usaView,
@@ -1027,6 +1035,7 @@ function App() {
               hideNoData={hideNoData}
               customFillByRegion={customFillByRegion}
               customColorLabels={customColorLabels}
+              customColorLabelsEnabled={customColorLabelsEnabled}
               onRegionClick={handleRegionColorClick}
             />
           </div>
@@ -1086,40 +1095,48 @@ function App() {
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: "8px",
+                  gap: "14px",
                   marginTop: "6px",
                 }}
               >
-                {paletteColors.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setSelectedPaletteColor(color)}
-                    aria-label={`Choose ${color}`}
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 999,
-                      border:
-                        selectedPaletteColor === color
-                          ? "2px solid #111827"
-                          : "1px solid rgba(148,163,184,0.65)",
-                      background: color,
-                      boxShadow:
-                        selectedPaletteColor === color
-                          ? "0 0 0 3px rgba(148,163,184,0.35)"
-                          : "none",
-                      cursor: "pointer",
-                    }}
-                  />
+                {paletteGroups.map((group) => (
+                  <div
+                    key={group.base}
+                    style={{ display: "flex", gap: "4px" }}
+                  >
+                    {[group.light, group.base, group.dark].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setSelectedPaletteColor(color)}
+                        aria-label={`Choose ${color}`}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 999,
+                          border:
+                            selectedPaletteColor === color
+                              ? "2px solid #111827"
+                              : "1px solid rgba(148,163,184,0.65)",
+                          background: color,
+                          boxShadow:
+                            selectedPaletteColor === color
+                              ? "0 0 0 3px rgba(148,163,184,0.35)"
+                              : "none",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
               <small
                 style={{ color: "#475569", marginTop: "6px", display: "block" }}
               >
                 Pick a color, then click a region to paint it — click a painted
-                region again with the same color selected to erase it. Used
-                colors appear in the legend.
+                region again with the same color selected to erase it. Each
+                color has a light and dark tone side by side. Used colors
+                appear in the legend.
               </small>
             </label>
           )}
@@ -1144,6 +1161,22 @@ function App() {
                       }
                       placeholder="Label this color"
                     />
+                    <label
+                      className="switch-row"
+                      aria-label={`Show label for ${color} on the map`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!customColorLabelsEnabled[color]}
+                        onChange={(e) =>
+                          setCustomColorLabelsEnabled((prev) => ({
+                            ...prev,
+                            [color]: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span className="switch switch-sm" aria-hidden="true"></span>
+                    </label>
                   </div>
                 ))}
               </div>

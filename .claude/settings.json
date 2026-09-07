@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sort -k5 -n -r)",
+      "Bash(git mv *)",
+      "Bash(npm run *)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"vite --port 5183\")",
+      "Bash(curl -sf http://localhost:5183)",
+      "Bash(node check.js)",
+      "Read(//c/Users/ardaa/AppData/Local/Temp/pw-v2/**)",
+      "Bash(node -e ' *)",
+      "Bash(npm run lint 2>&1 | tail -20 *)",
+      "Bash(node smoke.js)",
+      "Bash(rm -rf /tmp/pw-v2 /tmp/pw-perf)",
+      "Bash(mkdir -p /tmp/pw-gap)",
+      "Bash(npm init *)",
+      "Bash(node gap.js)",
+      "Read(//c/Users/ardaa/AppData/Local/Temp/pw-gap/**)",
+      "Bash(rm -f /tmp/pw-gap/drag-*.png)",
+      "Bash(node full-check.js)",
+      "Bash(rm -rf /tmp/pw-gap)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\ardaa\\AppData\\Local\\Temp\\pw-v2",
+      "C:\\Users\\ardaa\\AppData\\Local\\Temp\\pw-gap"
+    ]
+  }
+}

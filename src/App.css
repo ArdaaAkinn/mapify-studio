@@ -1071,6 +1071,21 @@ body {
   outline-offset: 2px;
 }
 
+.switch-sm {
+  width: 30px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.switch-sm::after {
+  width: 12px;
+  height: 12px;
+}
+
+.switch-row input:checked + .switch-sm::after {
+  transform: translateX(13px);
+}
+
 /* ─── UPLOAD + DOWNLOAD ─────────────────────────────────────── */
 
 .upload-label {
