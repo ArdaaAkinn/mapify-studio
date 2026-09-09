@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
+import { overlaps } from "./labelOverlap";
 
 const visualLabelAliases = {
   europe: {
@@ -718,11 +719,6 @@ export default function Map({
       });
 
       const labelPadding = 2;
-      const overlaps = (a, b) =>
-        a.x1 < b.x2 &&
-        a.x2 > b.x1 &&
-        a.y1 < b.y2 &&
-        a.y2 > b.y1;
 
       const labelInfo = labelGroups.nodes()
         .map((node, index) => {

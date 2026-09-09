@@ -6,6 +6,7 @@ import "./App.css";
 import DataTable from "./components/DataTable";
 import WorldGlobe from "./components/WorldGlobe";
 import Toast from "./components/Toast";
+import { normalizeRegionName, createMapRows, formatRelativeTime } from "./mapDataUtils";
 
 const AUTOSAVE_KEY = "mapify-studio:autosave:v1";
 
@@ -205,67 +206,7 @@ const mapTypeOptions = [
   },
 ];
 
-const createMapRows = (selectedMap) => {
-  if (!selectedMap?.features) return [];
-
-  return selectedMap.features.map((feature) => {
-    const name =
-      feature.properties.NAME_1 ||
-      feature.properties.Estado ||
-      feature.properties.Propinsi ||
-      feature.properties.name ||
-      feature.properties.Name ||
-      feature.properties.nom ||
-      feature.properties.reg_name ||
-      feature.properties.NAME ||
-      feature.properties.NUTS_NAME ||
-      feature.properties.admin ||
-      feature.properties.STATE_NAME ||
-      feature.properties.region ||
-      feature.properties.county;
-
-    return {
-      city: name,
-      value: "",
-    };
-  });
-};
-
-const formatRelativeTime = (timestamp) => {
-  const seconds = Math.round((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? "" : "s"} ago`;
-};
-
 function App() {
-  const normalizeRegionName = (value) => {
-    const aliases = {
-      turkiye: "turkey",
-      "bosnia and herzegovina": "bosnia and herz.",
-      "bosnia & herzegovina": "bosnia and herz.",
-      bosnia: "bosnia and herz.",
-      bih: "bosnia and herz.",
-    };
-
-    const normalized = String(value ?? "")
-      .trim()
-      .replace(/İ/g, "i")
-      .toLowerCase()
-      .replace(/ı/g, "i")
-      .replace(/ş/g, "s")
-      .replace(/ğ/g, "g")
-      .replace(/ü/g, "u")
-      .replace(/ö/g, "o")
-      .replace(/ç/g, "c");
-
-    return aliases[normalized] ?? normalized;
-  };
-
   const getMapIdFromPath = () => {
     const match = window.location.pathname.match(/^\/maps\/([^/]+)/);
     const mapId = match?.[1];
@@ -925,6 +866,15 @@ function App() {
     );
   }
 
+  // Sub-views with hundreds/thousands of tiny regions (Turkey districts,
+  // US counties, Europe NUTS-1/2/3) render too many labels for the
+  // collision-avoidance logic to lay out cleanly, so name labels are only
+  // offered on the top-level (province/state/country) view.
+  const isDenseSubView =
+    (selectedMapConfig.id === "turkey" && turkeyView === "districts") ||
+    (selectedMapConfig.id === "usa" && usaView === "counties") ||
+    (selectedMapConfig.id === "europe" && europeView !== "countries");
+
   return (
     <div className="app">
       <Toast toasts={toasts} onDismiss={dismissToast} />
@@ -1024,7 +974,7 @@ function App() {
               theme={theme}
               geoData={activeGeoData}
               mapName={selectedMapConfig.id}
-              showPlaceNames={showPlaceNames}
+              showPlaceNames={showPlaceNames && !isDenseSubView}
               showPlaceValues={showPlaceValues}
               mapTitle={mapTitle}
               legendTitle={legendTitle}
@@ -1253,15 +1203,23 @@ function App() {
 
         <div className="panel-section">
           <h3 className="panel-section-title">Labels</h3>
-          <label className="switch-row">
-            <span>Show place names</span>
-            <input
-              type="checkbox"
-              checked={showPlaceNames}
-              onChange={(e) => setShowPlaceNames(e.target.checked)}
-            />
-            <span className="switch" aria-hidden="true"></span>
-          </label>
+          {isDenseSubView ? (
+            <p className="panel-note">
+              Place names aren't available on this view — there are too many
+              small regions to label cleanly. Switch to the top-level view to
+              use them.
+            </p>
+          ) : (
+            <label className="switch-row">
+              <span>Show place names</span>
+              <input
+                type="checkbox"
+                checked={showPlaceNames}
+                onChange={(e) => setShowPlaceNames(e.target.checked)}
+              />
+              <span className="switch" aria-hidden="true"></span>
+            </label>
+          )}
           <label className="switch-row">
             <span>Show values</span>
             <input

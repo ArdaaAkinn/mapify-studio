@@ -1269,6 +1269,150 @@ body {
   font-style: italic;
 }
 
+.panel-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ─── IMPORT COLUMN PICKER ──────────────────────────────────── */
+
+.import-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5,8,26,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 1100;
+  padding: 20px;
+  animation: fade-in 0.15s ease forwards;
+}
+
+.import-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #151b2c;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  padding: 22px;
+}
+
+.import-modal-header h3 {
+  margin: 0 0 4px;
+  color: var(--text-1);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.import-modal-header p {
+  margin: 0 0 18px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.import-modal-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.import-modal-warning {
+  margin: 4px 0 14px;
+  padding: 8px 10px;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 12px;
+}
+
+.import-preview-wrap {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  display: block;
+  overflow-x: auto;
+}
+
+.import-preview-table thead,
+.import-preview-table tbody { display: table; width: 100%; table-layout: fixed; }
+
+.import-preview-table th,
+.import-preview-table td {
+  padding: 7px 10px;
+  text-align: left;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--border);
+}
+
+.import-preview-table th {
+  background: rgba(255,255,255,0.03);
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+
+.import-preview-table tbody tr:last-child td { border-bottom: none; }
+
+.import-preview-table th.import-col-region,
+.import-preview-table td.import-col-region {
+  background: rgba(99,102,241,0.1);
+  color: #a5b4fc;
+}
+
+.import-preview-table th.import-col-value,
+.import-preview-table td.import-col-value {
+  background: rgba(52,211,153,0.08);
+  color: #6ee7b7;
+}
+
+.import-preview-more {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--text-3);
+  font-size: 11.5px;
+  font-style: italic;
+}
+
+.import-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.import-modal-actions .download-btn {
+  width: auto;
+  padding: 9px 18px;
+}
+
+@media (max-width: 480px) {
+  .import-modal-fields { grid-template-columns: 1fr; }
+}
+
 .toast-close {
   position: absolute;
   top: 6px;
